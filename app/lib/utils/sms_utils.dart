@@ -9,26 +9,43 @@ class SmsUtils {
       int amountStart = message.indexOf(amountKeyword) + amountKeyword.length;
       int amountEnd = message.indexOf(".", amountStart) + 3;
       String creditedAmount = message.substring(amountStart, amountEnd);
+      String? last4Digits;
 
       String transactionKeyword = "?id=";
+      String accountKeyword = "your Account ";
       int transactionStart =
           message.indexOf(transactionKeyword) + transactionKeyword.length;
       String transactionId = message.substring(transactionStart).split(" ")[0];
 
+      int accountStart = message.indexOf(accountKeyword);
+      if (accountStart != -1) {
+        accountStart += accountKeyword.length;
+        List<String> parts = message.substring(accountStart).split(" ");
+        if (parts.isNotEmpty) {
+          String maskedAccount = parts[0]; // e.g., "1*****6068"
+          if (maskedAccount.length >= 4) {
+            last4Digits = maskedAccount.substring(maskedAccount.length - 4);
+          }
+        }
+      }
       return {
         "amount": creditedAmount,
         "transactionId": transactionId,
         "bankId": 1,
         "type": "CREDIT",
-        "transactionLink": "https://apps.cbe.come.et:100/?id=${transactionId}"
+        "transactionLink": "https://apps.cbe.come.et:100/?id=${transactionId}",
+        "time": DateTime.now().toString(),
+        "accountLastDigits": last4Digits
       };
     }
 
     String amountKeyword = "total of ETB";
     String transactionKeyword = "?id=";
+    String accountKeyword = "your Account ";
 
     double? totalDebited;
     String? transactionId;
+    String? last4Digits;
 
     int amountStart = message.indexOf(amountKeyword);
     if (amountStart != -1) {
@@ -44,12 +61,26 @@ class SmsUtils {
       transactionId = message.substring(transactionStart).split(" ")[0];
     }
 
+    int accountStart = message.indexOf(accountKeyword);
+    if (accountStart != -1) {
+      accountStart += accountKeyword.length;
+      List<String> parts = message.substring(accountStart).split(" ");
+      if (parts.isNotEmpty) {
+        String maskedAccount = parts[0];
+        if (maskedAccount.length >= 4) {
+          last4Digits = maskedAccount.substring(maskedAccount.length - 4);
+        }
+      }
+    }
+
     return {
       "amount": totalDebited,
       "transactionId": transactionId,
       "bankId": 1,
       "type": "DEBIT",
-      "transactionLink": "https://apps.cbe.come.et:100/?id=${transactionId}"
+      "transactionLink": "https://apps.cbe.come.et:100/?id=${transactionId}",
+      "time": DateTime.now().toString(),
+      "accountLastDigits": last4Digits
     };
   }
 }

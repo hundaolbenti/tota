@@ -4,6 +4,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:totals/cli_output.dart';
 import 'package:another_telephony/telephony.dart';
@@ -15,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:intl/intl.dart';
 import 'package:totals/data/consts.dart';
+import 'package:totals/utils/sms_utils.dart';
 import 'package:totals/widgets/add_account_form.dart';
 import 'package:totals/widgets/bank_detail.dart';
 import 'package:totals/widgets/banks_summary_list.dart';
@@ -310,16 +312,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     print("Received new messages from ${message.address}");
     try {
       if (message.address == "CBE") {
-        // extract the cbe message
-        var details = extractCBETransactionDetails(message.body!);
-        print(details);
+        var details = SmsUtils.extractCBETransactionDetails(message.body!);
         SharedPreferences prefs = await SharedPreferences.getInstance();
         var allTransactions = prefs.getStringList(key) ?? [];
-        // check if there's a member with the same reference as the new one, if there is, skip
         if (allTransactions.isNotEmpty) {
           for (var i = 0; i < allTransactions.length; i++) {
             var transaction = jsonDecode(allTransactions[i]);
-            if (transaction['reference'] == details['reference']) {
+            if (transaction['transactionId'] == details['transactionId']) {
               return;
             }
           }
@@ -329,33 +328,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         getItems();
         return;
       }
-      if (message.body?.isNotEmpty == true) {
-        var details = extractDetails(message.body!);
-        if (details['amount'] != 'Not found' &&
-            details['reference'] != 'Not found' &&
-            details['creditor'] != 'Not found' &&
-            details['time'] != 'Not found') {
-          print(details);
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          var transactionExists = prefs.getStringList(key) ?? [];
-          if (transactionExists.isNotEmpty) {
-            for (var i = 0; i < transactionExists.length; i++) {
-              var transaction = jsonDecode(transactionExists[i]);
-              if (transaction['reference'] == details['reference']) {
-                return;
-              }
-            }
-          }
-          transactionExists.add(jsonEncode(details));
-          print(transactionExists);
-          await prefs.setStringList(key, transactionExists);
-          print("saved");
-          getItems();
-        }
-      }
     } catch (e) {
       print(e);
-      updateOutput("Failed to send reply: ${e.toString()}");
     }
   }
 
@@ -706,17 +680,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'TOTALS',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Color(0xFF294EC3),
-                      fontWeight: FontWeight.bold,
+                  ClipRRect(
+                    // borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      "assets/images/logo-text.png",
+                      fit: BoxFit.cover,
                     ),
                   ),
+                  // Center(
+                  //   child: SvgPicture.asset(
+                  //     'assets/images/logo.svg',
+                  //     semanticsLabel: 'My SVG Image',
+                  //     height: 100,
+                  //     width: 70,
+                  //   ),
+                  // ),
                 ],
               ),
               Row(

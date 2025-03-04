@@ -67,11 +67,32 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.reload();
     List<String>? allAccounts = prefs.getStringList('accounts');
+
     Account? tempAccount;
     if (allAccounts != null) {
       for (var a in allAccounts) {
         var accountData = jsonDecode(a);
         if (accountData['accountNumber'] == widget.accountNumber) {
+          var allTransactions = prefs.getStringList("transactions") ?? [];
+          if (allTransactions.isNotEmpty) {
+            for (var i = 0; i < allTransactions.length; i++) {
+              var transaction = jsonDecode(allTransactions[i]);
+              if (transaction['accountNumber'] ==
+                  widget.accountNumber
+                      .substring(widget.accountNumber.length - 4)) {
+                transactions.add(Transaction(
+                  reference: transaction['reference'],
+                  accountNumber: transaction['accountNumber'],
+                  creditor: transaction['creditor'],
+                  receiver: transaction['receiver'],
+                  amount: transaction['amount'],
+                  time: DateTime.parse(transaction['time']),
+                  type: transaction['type'],
+                ));
+              }
+            }
+          }
+
           tempAccount = Account(
             accountHolderName: accountData['accountHolderName'],
             accountNumber: accountData['accountNumber'],
