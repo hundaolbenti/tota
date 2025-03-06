@@ -316,18 +316,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     print(message.body);
     print("Received new messages from ${message.address}");
     try {
-      if (message.address == "CBE") {
+      if (message.address == "+251943685872") {
         var details = SmsUtils.extractCBETransactionDetails(message.body!);
         SharedPreferences prefs = await SharedPreferences.getInstance();
         var allTransactions = prefs.getStringList(key) ?? [];
         if (allTransactions.isNotEmpty) {
           for (var i = 0; i < allTransactions.length; i++) {
             var transaction = jsonDecode(allTransactions[i]);
-            if (transaction['transactionId'] == details['transactionId']) {
+            if (details['reference'] != null &&
+                (transaction['reference'] == details['reference'])) {
               return;
             }
           }
         }
+        print(details);
         allTransactions.add(jsonEncode(details));
         await prefs.setStringList(key, allTransactions);
         getItems();
@@ -402,6 +404,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.reload();
     List<String>? transactionExists = prefs.getStringList('transactions');
+    print(transactionExists);
     List<String>? allAccounts = prefs.getStringList('accounts');
     List<String>? allTransactions = prefs.getStringList('transactions');
 
@@ -467,7 +470,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     (sum ?? 0.0) +
                     (jsonDecode(transaction)['type'] == 'CREDIT'
                         ? double.parse(
-                            jsonDecode(transaction)['creditedAmount'])
+                            jsonDecode(transaction)['creditedAmount'] ?? "0.0")
                         : 0.0)) ??
             0.0;
         summary = AllSummary(
@@ -646,8 +649,70 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return !_isAuthenticated
         ? Scaffold(
-            body: Center(child: Text("Authentication Required!")),
-            floatingActionButton: _authButton(),
+            body: Stack(
+              children: [
+                Center(
+                  child: Image.asset(
+                    'assets/images/bg.png',
+                    fit: BoxFit.cover,
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                  ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Center(
+                        child: Image.asset(
+                          'assets/images/logo-text-white.png',
+                          fit: BoxFit.cover,
+                          width: 250,
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        'HOME FOR ALL YOUR ACCOUNTS',
+                        style: TextStyle(
+                          fontSize: 14,
+                          // fontWeight: FontWeight.bold,
+                          color: Colors.grey[300],
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      FloatingActionButton(
+                        onPressed: () async {
+                          if (!_isAuthenticated) {
+                            final bool canAuthenticateWithBiometrics =
+                                await _auth.canCheckBiometrics;
+                            if (canAuthenticateWithBiometrics) {
+                              try {
+                                final bool didAuthenticate =
+                                    await _auth.authenticate(
+                                        localizedReason:
+                                            'Please authenticate to show account details',
+                                        options: const AuthenticationOptions(
+                                            biometricOnly: false));
+                                setState(() {
+                                  _isAuthenticated = didAuthenticate;
+                                });
+                              } catch (e) {
+                                print(e);
+                              }
+                            }
+                          } else {
+                            _isAuthenticated = false;
+                          }
+                        },
+                        child: Icon(
+                            _isAuthenticated ? Icons.lock : Icons.lock_open),
+                      )
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // floatingActionButton: _authButton(),
           )
         : Scaffold(
             backgroundColor: const Color(0xffF1F4FF),
@@ -706,6 +771,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           child: Image.asset(
                             "assets/images/logo-text.png",
                             fit: BoxFit.cover,
+                            width: 100,
                           ),
                         ),
                         // Center(
@@ -723,6 +789,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         IconButton(
+                          icon: const Icon(Icons.calendar_month_outlined,
+                              color: Color(0xFF8DA1E1), size: 25),
+                          onPressed: () => _selectDate(context),
+                        ),
+                        IconButton(
                           icon: const Icon(Icons.lock_outline,
                               color: Color(0xFF8DA1E1), size: 25),
                           onPressed: () {
@@ -731,11 +802,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             });
                           },
                         ),
-                        // IconButton(
-                        //   icon: const Icon(Icons.search,
-                        //       color: Color(0xFF8DA1E1), size: 25),
-                        //   onPressed: () => _selectDate(context),
-                        // ),
                         // IconButton(
                         //   icon: const Icon(Icons.calendar_month_outlined,
                         //       color: Color(0xFF8DA1E1), size: 25),

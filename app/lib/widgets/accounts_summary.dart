@@ -293,6 +293,7 @@ class _AccountsSummaryListState extends State<AccountsSummaryList> {
                                       MaterialPageRoute(
                                         builder: (context) => AccountDetailPage(
                                           accountNumber: account.accountNumber,
+                                          bankId: account.bankId,
                                         ),
                                       ),
                                     );

@@ -10,8 +10,8 @@ class Account {
   final String accountNumber;
   final String accountHolderName;
   final int bankId;
-  final double totalCredit;
-  final double totalDebit;
+  double totalCredit;
+  double totalDebit;
 
   Account({
     required this.accountNumber,
@@ -26,7 +26,6 @@ class Transaction {
   final String reference;
   final String accountNumber;
   final String? creditor;
-  final String receiver;
   final double amount;
   final DateTime time;
   final String type;
@@ -37,13 +36,13 @@ class Transaction {
       this.creditor,
       required this.amount,
       required this.time,
-      required this.receiver,
       required this.type});
 }
 
 class AccountDetailPage extends StatefulWidget {
   final String accountNumber;
-  AccountDetailPage({required this.accountNumber});
+  final int bankId;
+  AccountDetailPage({required this.accountNumber, required this.bankId});
 
   @override
   _AccountDetailPageState createState() => _AccountDetailPageState();
@@ -53,6 +52,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
   List<String> tabs = ["All Transactions", "Credits", "Debits"];
   String activeTab = "All Transactions";
   List<Transaction> transactions = [];
+  List<Transaction> visibleTransaction = [];
 
   Account? account;
   bool isExpanded = false;
@@ -66,33 +66,17 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
   void getData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.reload();
+    Account? tempAccount;
     List<String>? allAccounts = prefs.getStringList('accounts');
 
-    Account? tempAccount;
+    var allTransactions = prefs.getStringList("transactions") ?? [];
+    print(allTransactions);
+    List<Transaction> tempTransactions = [];
+
     if (allAccounts != null) {
       for (var a in allAccounts) {
         var accountData = jsonDecode(a);
         if (accountData['accountNumber'] == widget.accountNumber) {
-          var allTransactions = prefs.getStringList("transactions") ?? [];
-          if (allTransactions.isNotEmpty) {
-            for (var i = 0; i < allTransactions.length; i++) {
-              var transaction = jsonDecode(allTransactions[i]);
-              if (transaction['accountNumber'] ==
-                  widget.accountNumber
-                      .substring(widget.accountNumber.length - 4)) {
-                transactions.add(Transaction(
-                  reference: transaction['reference'],
-                  accountNumber: transaction['accountNumber'],
-                  creditor: transaction['creditor'],
-                  receiver: transaction['receiver'],
-                  amount: transaction['amount'],
-                  time: DateTime.parse(transaction['time']),
-                  type: transaction['type'],
-                ));
-              }
-            }
-          }
-
           tempAccount = Account(
             accountHolderName: accountData['accountHolderName'],
             accountNumber: accountData['accountNumber'],
@@ -100,57 +84,44 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
             totalCredit: accountData['totalCredit'] ?? 0,
             totalDebit: accountData['totalDebit'] ?? 0,
           );
-          break;
         }
       }
     }
+
+    if (allTransactions.isNotEmpty) {
+      for (var i = 0; i < allTransactions.length; i++) {
+        var transaction = jsonDecode(allTransactions[i]);
+        if (widget.bankId == 1) {
+          if (transaction['accountNumber'] ==
+              widget.accountNumber.substring(widget.accountNumber.length - 4)) {
+            tempTransactions.add(Transaction(
+              reference: transaction['reference'],
+              accountNumber: transaction['accountNumber'],
+              creditor: transaction['creditor'],
+              amount: transaction['amount'] ?? 0,
+              time: DateTime.parse(transaction['time']),
+              type: transaction['type'],
+            ));
+          }
+        }
+      }
+    }
+
+    tempAccount?.totalCredit = tempTransactions
+        .where((element) => element.type == 'CREDIT')
+        .map((e) => e.amount)
+        .fold(
+            0, (previousValue, element) => (previousValue as double) + element);
+    tempAccount?.totalDebit = tempTransactions
+        .where((element) => element.type == 'DEBIT')
+        .map((e) => e.amount)
+        .fold(
+            0, (previousValue, element) => (previousValue as double) + element);
+
     setState(() {
       account = tempAccount;
-      transactions = [
-        Transaction(
-          reference: 'TXN001',
-          creditor: 'John Doe',
-          receiver: 'Jane Smith',
-          accountNumber: '1000399285678',
-          type: 'credit',
-          amount: 100.0,
-          time: DateTime.now().subtract(Duration(days: 1)),
-        ),
-        Transaction(
-          reference: 'TXN002',
-          creditor: 'Alice Johnson',
-          accountNumber: '1000399285678',
-          receiver: 'Bob Brown',
-          type: 'credit',
-          amount: 200.0,
-          time: DateTime.now().subtract(Duration(days: 2)),
-        ),
-        Transaction(
-          reference: 'TXN003',
-          accountNumber: '1000399285678',
-          type: 'debit',
-          receiver: 'Diana Evans',
-          amount: 150.0,
-          time: DateTime.now().subtract(Duration(days: 3)),
-        ),
-        Transaction(
-          reference: 'TXN004',
-          receiver: 'Frank Green',
-          accountNumber: '1000399285678',
-          type: 'debit',
-          amount: 250.0,
-          time: DateTime.now().subtract(Duration(days: 4)),
-        ),
-        Transaction(
-          reference: 'TXN005',
-          creditor: 'George Harris',
-          receiver: 'Hannah White',
-          accountNumber: '1000399285678',
-          type: 'credit',
-          amount: 300.0,
-          time: DateTime.now().subtract(Duration(days: 5)),
-        ),
-      ];
+      transactions = tempTransactions;
+      visibleTransaction = transactions;
     });
   }
 
@@ -204,14 +175,16 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                             setState(() {
                               activeTab = tabs[index];
                               if (index == 1) {
-                                transactions = transactions
+                                visibleTransaction = transactions
                                     .where(
-                                        (element) => element.type == 'credit')
+                                        (element) => element.type == 'CREDIT')
                                     .toList();
                               } else if (index == 2) {
-                                transactions = transactions
-                                    .where((element) => element.type == 'debit')
+                                visibleTransaction = transactions
+                                    .where((element) => element.type == 'DEBIT')
                                     .toList();
+                              } else {
+                                visibleTransaction = transactions;
                               }
                             });
                           },
@@ -273,7 +246,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                                 AppConstants.banks
                                                     .firstWhere((element) =>
                                                         element.id ==
-                                                        account?.bankId)
+                                                        widget.bankId)
                                                     .image,
                                                 fit: BoxFit.cover,
                                               ),
@@ -299,8 +272,8 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                                                 (element) =>
                                                                     element
                                                                         .id ==
-                                                                    account
-                                                                        ?.bankId)
+                                                                    widget
+                                                                        .bankId)
                                                             .name,
                                                         style: const TextStyle(
                                                           fontSize: 16,
@@ -459,6 +432,15 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                           margin: const EdgeInsets.symmetric(horizontal: 20),
                           child: Column(children: [
                             TextField(
+                              onChanged: (value) {
+                                setState(() {
+                                  visibleTransaction = transactions
+                                      .where((element) => element.reference
+                                          .toLowerCase()
+                                          .contains(value.toLowerCase()))
+                                      .toList();
+                                });
+                              },
                               decoration: InputDecoration(
                                 hintText: 'Search for Transactions',
                                 hintStyle: TextStyle(
@@ -488,9 +470,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
 
                               child: ListView.builder(
                                 shrinkWrap: true,
-                                itemCount: transactions.length,
+                                itemCount: visibleTransaction.length,
                                 itemBuilder: (context, index) {
-                                  Transaction transaction = transactions[index];
+                                  Transaction transaction =
+                                      visibleTransaction[index];
                                   return Card(
                                     margin: const EdgeInsets.symmetric(
                                         vertical: 8.0),
@@ -513,11 +496,11 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                             children: [
                                               Text('${transaction.reference}'),
                                               Text(
-                                                '${transaction.type == 'credit' ? "+" : "-"} ${transaction.amount.toStringAsFixed(2)} ETB',
+                                                '${transaction.type == 'CREDIT' ? "+" : "-"} ${transaction.amount.toStringAsFixed(2)} ETB',
                                                 style: TextStyle(
                                                     fontWeight: FontWeight.w500,
                                                     color: transaction.type ==
-                                                            'credit'
+                                                            'CREDIT'
                                                         ? Colors.green
                                                         : Colors.red),
                                               ),

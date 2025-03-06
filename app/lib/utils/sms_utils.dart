@@ -5,17 +5,33 @@ class SmsUtils {
     String type =
         message.toLowerCase().contains("credited") ? "CREDIT" : "DEBIT";
     if (type == "CREDIT") {
-      String amountKeyword = "Credited with ETB ";
-      int amountStart = message.indexOf(amountKeyword) + amountKeyword.length;
-      int amountEnd = message.indexOf(".", amountStart) + 3;
-      String creditedAmount = message.substring(amountStart, amountEnd);
+      double? creditedAmount;
+      String startKeyword = "ETB";
+      String endKeyword = "Your Current";
+
+      int startIndex = message.indexOf(startKeyword);
+      int endIndex = message.indexOf(endKeyword);
+
+      if (startIndex != -1 && endIndex != -1) {
+        startIndex += startKeyword.length; // Move index past "ETB"
+        String extracted = message.substring(startIndex, endIndex).trim();
+        extracted = extracted.replaceAll(",", "");
+        if (extracted.endsWith(".")) {
+          extracted = extracted.substring(0, extracted.length - 1);
+        }
+
+        print("Credited Amount: ETB $extracted");
+        creditedAmount = double.tryParse(extracted.trim());
+      }
       String? last4Digits;
 
       String transactionKeyword = "?id=";
       String accountKeyword = "your Account ";
       int transactionStart =
           message.indexOf(transactionKeyword) + transactionKeyword.length;
-      String transactionId = message.substring(transactionStart).split(" ")[0];
+      String transactionId = message.contains("?id=")
+          ? message.substring(transactionStart).split(" ")[0]
+          : "";
 
       int accountStart = message.indexOf(accountKeyword);
       if (accountStart != -1) {
@@ -28,18 +44,21 @@ class SmsUtils {
           }
         }
       }
+      print("Credited amount: $creditedAmount");
+      print("Transaction ID: $transactionId");
+      print("Last 4 digits: $last4Digits");
+
       return {
         "amount": creditedAmount,
-        "transactionId": transactionId,
+        "reference": transactionId,
         "bankId": 1,
         "type": "CREDIT",
         "transactionLink": "https://apps.cbe.come.et:100/?id=${transactionId}",
         "time": DateTime.now().toString(),
-        "accountLastDigits": last4Digits
+        "accountNumber": last4Digits
       };
     }
 
-    String amountKeyword = "total of ETB";
     String transactionKeyword = "?id=";
     String accountKeyword = "your Account ";
 
@@ -47,13 +66,33 @@ class SmsUtils {
     String? transactionId;
     String? last4Digits;
 
-    int amountStart = message.indexOf(amountKeyword);
-    if (amountStart != -1) {
-      amountStart += amountKeyword.length;
-      int amountEnd = message.indexOf(" ", amountStart);
-      if (amountEnd == -1) amountEnd = message.length;
-      totalDebited = double.tryParse(
-          message.substring(amountStart, amountEnd).replaceAll(',', ''));
+    String startKeyword = "total of";
+    String endKeyword = "Your Current";
+
+    int startIndex = message.indexOf(startKeyword);
+    int endIndex = message.indexOf(endKeyword);
+
+    if (startIndex != -1 && endIndex != -1) {
+      startIndex += startKeyword.length;
+      String extracted = message.substring(startIndex, endIndex).trim();
+
+      // Remove all non-numeric characters except for "."
+      String cleaned = "";
+      for (int i = 0; i < extracted.length; i++) {
+        if ((extracted[i].codeUnitAt(0) >= 48 &&
+                extracted[i].codeUnitAt(0) <= 57) ||
+            extracted[i] == '.') {
+          cleaned += extracted[i];
+        }
+      }
+      if (cleaned.endsWith(".")) {
+        cleaned = cleaned.substring(0, cleaned.length - 1);
+      }
+
+      print("Extracted Amount: $cleaned");
+      totalDebited = double.tryParse(cleaned.trim());
+    } else {
+      print("Keywords not found.");
     }
     int transactionStart = message.indexOf(transactionKeyword);
     if (transactionStart != -1) {
@@ -75,12 +114,12 @@ class SmsUtils {
 
     return {
       "amount": totalDebited,
-      "transactionId": transactionId,
+      "reference": transactionId,
       "bankId": 1,
       "type": "DEBIT",
       "transactionLink": "https://apps.cbe.come.et:100/?id=${transactionId}",
       "time": DateTime.now().toString(),
-      "accountLastDigits": last4Digits
+      "accountNumber": last4Digits
     };
   }
 }
