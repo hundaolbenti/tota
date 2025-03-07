@@ -29,32 +29,25 @@ onBackgroundMessage(SmsMessage message) async {
   if (message.body == null) {
     return;
   }
-  if (!message.body!.contains("Dear Customer your Account")) {
-    return message;
-  }
 
   try {
-    if (message.body?.isNotEmpty == true) {
-      var details = extractDetails(message.body!);
-      print(details);
-      if (details['amount'] != 'Not found' &&
-          details['reference'] != 'Not found' &&
-          details['creditor'] != 'Not found' &&
-          details['time'] != 'Not found') {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        var transactionExists = prefs.getStringList("transactions") ?? [];
-        if (transactionExists.isNotEmpty) {
-          for (var i = 0; i < transactionExists.length; i++) {
-            var transaction = jsonDecode(transactionExists[i]);
-            if (transaction['reference'] == details['reference']) {
-              return;
-            }
+    if (message.address == "+251943685872") {
+      var details = SmsUtils.extractCBETransactionDetails(message.body!);
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      var allTransactions = prefs.getStringList("transactions") ?? [];
+      if (allTransactions.isNotEmpty) {
+        for (var i = 0; i < allTransactions.length; i++) {
+          var transaction = jsonDecode(allTransactions[i]);
+          if (details['reference'] != null &&
+              (transaction['reference'] == details['reference'])) {
+            return;
           }
         }
-        transactionExists.add(jsonEncode(details));
-        await prefs.setStringList("transactions", transactionExists);
-        syncDataBackground();
       }
+      print(details);
+      allTransactions.add(jsonEncode(details));
+      await prefs.setStringList("transactions", allTransactions);
+      return;
     }
   } catch (e) {
     print(e);
@@ -62,66 +55,66 @@ onBackgroundMessage(SmsMessage message) async {
   return message;
 }
 
-Future<void> syncDataBackground() async {
-  try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
+// Future<void> syncDataBackground() async {
+//   try {
+//     SharedPreferences prefs = await SharedPreferences.getInstance();
+//     await prefs.reload();
 
-    // Retrieve existing transactions
-    List<String> existingTransactions =
-        prefs.getStringList('transactions') ?? [];
+//     // Retrieve existing transactions
+//     List<String> existingTransactions =
+//         prefs.getStringList('transactions') ?? [];
 
-    // Decode transactions
-    List<Map<String, dynamic>> transactionsInStore = (existingTransactions
-        .map((transaction) => json.decode(transaction) as Map<String, dynamic>)
-        .toList());
-    print(transactionsInStore);
-    // Filter out transactions that are not yet synced
-    List<Map<String, dynamic>> unsyncedTransactions = transactionsInStore
-        .where((transaction) => transaction['status'] != 'SYNCED')
-        .toList();
-    if (unsyncedTransactions.isEmpty) {
-      print("No transactions to sync.");
-      return;
-    }
+//     // Decode transactions
+//     List<Map<String, dynamic>> transactionsInStore = (existingTransactions
+//         .map((transaction) => json.decode(transaction) as Map<String, dynamic>)
+//         .toList());
+//     print(transactionsInStore);
+//     // Filter out transactions that are not yet synced
+//     List<Map<String, dynamic>> unsyncedTransactions = transactionsInStore
+//         .where((transaction) => transaction['status'] != 'SYNCED')
+//         .toList();
+//     if (unsyncedTransactions.isEmpty) {
+//       print("No transactions to sync.");
+//       return;
+//     }
 
-    final response = await http.post(
-      Uri.parse('https://cniff-admin.vercel.app/api/transactions'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'data': unsyncedTransactions}),
-    );
-    if (response.statusCode == 201) {
-      // Save the updated transactions back to shared preferences
-      var updatedTransactions = existingTransactions.map((e) {
-        var existingTransaction = json.decode(e);
-        // Check if the transaction is in the unsyncedTransactions list
-        var unsyncedTransaction = unsyncedTransactions.firstWhere(
-          (transaction) =>
-              transaction['reference'] == existingTransaction['reference'],
-          orElse: () => {},
-        );
+//     final response = await http.post(
+//       Uri.parse('https://cniff-admin.vercel.app/api/transactions'),
+//       headers: {'Content-Type': 'application/json'},
+//       body: json.encode({'data': unsyncedTransactions}),
+//     );
+//     if (response.statusCode == 201) {
+//       // Save the updated transactions back to shared preferences
+//       var updatedTransactions = existingTransactions.map((e) {
+//         var existingTransaction = json.decode(e);
+//         // Check if the transaction is in the unsyncedTransactions list
+//         var unsyncedTransaction = unsyncedTransactions.firstWhere(
+//           (transaction) =>
+//               transaction['reference'] == existingTransaction['reference'],
+//           orElse: () => {},
+//         );
 
-        // If a match is found in unsynced transactions, update it
-        if (unsyncedTransaction.isNotEmpty) {
-          existingTransaction['status'] = 'SYNCED'; // Update the status field
-          return json.encode(existingTransaction);
-        } else {
-          return e; // Return the original transaction if no match is found
-        }
-      }).toList();
-      print(updatedTransactions);
+//         // If a match is found in unsynced transactions, update it
+//         if (unsyncedTransaction.isNotEmpty) {
+//           existingTransaction['status'] = 'SYNCED'; // Update the status field
+//           return json.encode(existingTransaction);
+//         } else {
+//           return e; // Return the original transaction if no match is found
+//         }
+//       }).toList();
+//       print(updatedTransactions);
 
-      await prefs.setStringList('transactions', updatedTransactions);
-      await prefs.setString('last_sync', DateTime.now().toString());
-      print("Transactions synced successfully!");
-    } else {
-      throw Exception(
-          "Failed to sync transactions. Status: ${response.statusCode}");
-    }
-  } catch (e) {
-    print("Sync failed: $e");
-  } finally {}
-}
+//       await prefs.setStringList('transactions', updatedTransactions);
+//       await prefs.setString('last_sync', DateTime.now().toString());
+//       print("Transactions synced successfully!");
+//     } else {
+//       throw Exception(
+//           "Failed to sync transactions. Status: ${response.statusCode}");
+//     }
+//   } catch (e) {
+//     print("Sync failed: $e");
+//   } finally {}
+// }
 
 Map<String, dynamic> extractDetails(String message) {
   try {
