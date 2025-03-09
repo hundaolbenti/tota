@@ -32,6 +32,9 @@ class SmsUtils {
       String transactionId = message.contains("?id=")
           ? message.substring(transactionStart).split(" ")[0]
           : "";
+      if (transactionId.length > 8) {
+        transactionId = transactionId.substring(0, transactionId.length - 8);
+      }
 
       int accountStart = message.indexOf(accountKeyword);
       if (accountStart != -1) {
@@ -124,6 +127,9 @@ class SmsUtils {
     if (transactionStart != -1) {
       transactionStart += transactionKeyword.length;
       transactionId = message.substring(transactionStart).split(" ")[0];
+      if (transactionId.length > 8) {
+        transactionId = transactionId.substring(0, transactionId.length - 8);
+      }
     }
 
     int accountStart = message.indexOf(accountKeyword);

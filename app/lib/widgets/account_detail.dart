@@ -10,16 +10,17 @@ class Account {
   final String accountNumber;
   final String accountHolderName;
   final int bankId;
+  final double balance;
   double totalCredit;
   double totalDebit;
 
-  Account({
-    required this.accountNumber,
-    required this.accountHolderName,
-    required this.bankId,
-    required this.totalCredit,
-    required this.totalDebit,
-  });
+  Account(
+      {required this.accountNumber,
+      required this.accountHolderName,
+      required this.bankId,
+      required this.totalCredit,
+      required this.totalDebit,
+      required this.balance});
 }
 
 class Transaction {
@@ -80,6 +81,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
           tempAccount = Account(
             accountHolderName: accountData['accountHolderName'],
             accountNumber: accountData['accountNumber'],
+            balance: double.tryParse(accountData['balance']) ?? 0,
             bankId: accountData['bank'],
             totalCredit: accountData['totalCredit'] ?? 0,
             totalDebit: accountData['totalDebit'] ?? 0,
@@ -315,9 +317,6 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                                     fontWeight: FontWeight.w500,
                                                   ),
                                                 ),
-                                                const SizedBox(
-                                                  height: 4,
-                                                ),
                                                 Text(
                                                   account?.accountHolderName ??
                                                       '',
@@ -335,17 +334,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                                       CrossAxisAlignment.center,
                                                   children: [
                                                     Text(
-                                                      account?.totalCredit !=
-                                                                  null &&
-                                                              account?.totalDebit !=
-                                                                  null
-                                                          ? ((account!.totalCredit) -
-                                                                  (account!
-                                                                      .totalDebit))
-                                                              .toString()
-                                                          : '0 ETB',
+                                                      "${account?.balance.toString()} ETB" ??
+                                                          "0 ETB",
                                                       style: const TextStyle(
-                                                        fontSize: 16,
+                                                        fontSize: 14,
                                                         color:
                                                             Color(0xFFF7F8FB),
                                                         // Subtle text color
