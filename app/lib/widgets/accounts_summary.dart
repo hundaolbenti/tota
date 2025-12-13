@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 import 'package:totals/data/consts.dart';
-import 'package:totals/main.dart';
 import 'package:totals/utils/text_utils.dart';
 import 'package:totals/widgets/account_detail.dart';
 import 'package:totals/models/summary_models.dart';
+import 'package:totals/services/account_sync_status_service.dart';
+import 'package:totals/repositories/account_repository.dart';
+import 'package:totals/providers/transaction_provider.dart';
 
 class AccountsSummaryList extends StatefulWidget {
   final List<AccountSummary> accountSummaries;
-  List<String> visibleTotalBalancesForSubCards;
+  final List<String> visibleTotalBalancesForSubCards;
 
-  AccountsSummaryList(
+  const AccountsSummaryList(
       {Key? key,
       required this.accountSummaries,
       required this.visibleTotalBalancesForSubCards})
@@ -30,337 +33,539 @@ class _AccountsSummaryListState extends State<AccountsSummaryList> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.5, // ✅ Give height
-      // Add Expanded to give ListView a defined size
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: widget.accountSummaries.length,
-        itemBuilder: (context, index) {
-          final account = widget.accountSummaries[index];
-          return Column(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (isExpanded == "") {
-                      isExpanded = account.accountNumber;
-                    } else if (isExpanded == account.accountNumber) {
-                      isExpanded = "";
-                    } else {
-                      isExpanded = account.accountNumber;
-                    }
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFEEEEEE)),
-                    color: Colors.white,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Row(
-                        children: [
-                          SizedBox(
-                            width: 60,
-                            height: 60,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.asset(
-                                AppConstants.banks
-                                    .firstWhere((element) =>
-                                        element.id == account.bankId)
-                                    .image,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Container(
-                            child: Row(
-                              children: [
-                                Container(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          mainAxisSize: MainAxisSize.max,
-                                          children: [
-                                            Text(
-                                                AppConstants.banks
-                                                    .firstWhere((element) =>
-                                                        element.id ==
-                                                        account.bankId)
-                                                    .name,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF444750),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                )),
-                                            const SizedBox(width: 15),
-                                            Icon(
-                                              isExpanded ==
-                                                      account.accountNumber
-                                                  ? Icons.keyboard_arrow_up
-                                                  : Icons.keyboard_arrow_down,
-                                            )
-                                          ]),
-                                      Text(
-                                        account.accountNumber,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey,
+    return Consumer<AccountSyncStatusService>(
+      builder: (context, syncStatusService, _) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.5, // ✅ Give height
+          // Add Expanded to give ListView a defined size
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: widget.accountSummaries.length,
+            itemBuilder: (context, index) {
+              final account = widget.accountSummaries[index];
+              final syncStatus = syncStatusService.getSyncStatus(
+                account.accountNumber,
+                account.bankId,
+              );
+              return Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFEEEEEE)),
+                      color: Colors.white,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    if (isExpanded == "") {
+                                      isExpanded = account.accountNumber;
+                                    } else if (isExpanded ==
+                                        account.accountNumber) {
+                                      isExpanded = "";
+                                    } else {
+                                      isExpanded = account.accountNumber;
+                                    }
+                                  });
+                                },
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 60,
+                                      height: 60,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.asset(
+                                          AppConstants.banks
+                                              .firstWhere((element) =>
+                                                  element.id == account.bankId)
+                                              .image,
+                                          fit: BoxFit.cover,
                                         ),
                                       ),
-                                      Text(
-                                        account.accountHolderName,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
+                                    ),
+                                    SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.center,
+                                            CrossAxisAlignment.start,
                                         children: [
+                                          Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              mainAxisSize: MainAxisSize.max,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                      AppConstants.banks
+                                                          .firstWhere(
+                                                              (element) =>
+                                                                  element.id ==
+                                                                  account
+                                                                      .bankId)
+                                                          .name,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color:
+                                                            Color(0xFF444750),
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      )),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Icon(
+                                                  isExpanded ==
+                                                          account.accountNumber
+                                                      ? Icons.keyboard_arrow_up
+                                                      : Icons
+                                                          .keyboard_arrow_down,
+                                                )
+                                              ]),
                                           Text(
-                                              widget.visibleTotalBalancesForSubCards
-                                                      .contains(
-                                                          account.accountNumber)
-                                                  ? formatNumberWithComma(
-                                                          account.balance) +
-                                                      " ETB"
-                                                  : "******",
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF444750),
-                                              )),
-                                          SizedBox(
-                                            width: 20,
+                                            account.accountNumber,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey,
+                                            ),
                                           ),
-                                          GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  if (widget
-                                                      .visibleTotalBalancesForSubCards
-                                                      .contains(account
-                                                          .accountNumber)) {
-                                                    widget
-                                                        .visibleTotalBalancesForSubCards
-                                                        .remove(account
-                                                            .accountNumber);
-                                                  } else {
-                                                    widget
-                                                        .visibleTotalBalancesForSubCards
-                                                        .add(account
-                                                            .accountNumber);
-                                                  }
-                                                });
-                                              },
-                                              child: Icon(
-                                                widget.visibleTotalBalancesForSubCards
-                                                        .contains(account
-                                                            .accountNumber)
-                                                    ? Icons.visibility_off
-                                                    : Icons
-                                                        .remove_red_eye_outlined,
-                                                color: Color(0xFFBDC0CA),
-                                              ))
+                                          Text(
+                                            account.accountHolderName,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          if (syncStatus != null)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  top: 4.0),
+                                              child: Row(
+                                                children: [
+                                                  SizedBox(
+                                                    width: 12,
+                                                    height: 12,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation<
+                                                              Color>(
+                                                        const Color(0xFF294EC3),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    syncStatus,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: const Color(
+                                                          0xFF294EC3),
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                  widget.visibleTotalBalancesForSubCards
+                                                          .contains(account
+                                                              .accountNumber)
+                                                      ? formatNumberWithComma(
+                                                              account.balance) +
+                                                          " ETB"
+                                                      : "******",
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF444750),
+                                                  )),
+                                              SizedBox(
+                                                width: 20,
+                                              ),
+                                              GestureDetector(
+                                                  onTap: () {
+                                                    setState(() {
+                                                      if (widget
+                                                          .visibleTotalBalancesForSubCards
+                                                          .contains(account
+                                                              .accountNumber)) {
+                                                        widget
+                                                            .visibleTotalBalancesForSubCards
+                                                            .remove(account
+                                                                .accountNumber);
+                                                      } else {
+                                                        widget
+                                                            .visibleTotalBalancesForSubCards
+                                                            .add(account
+                                                                .accountNumber);
+                                                      }
+                                                    });
+                                                  },
+                                                  child: Icon(
+                                                    widget.visibleTotalBalancesForSubCards
+                                                            .contains(account
+                                                                .accountNumber)
+                                                        ? Icons.visibility_off
+                                                        : Icons
+                                                            .remove_red_eye_outlined,
+                                                    color: Color(0xFFBDC0CA),
+                                                  ))
+                                            ],
+                                          ),
                                         ],
                                       ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                _showDeleteConfirmation(context, account);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red[300],
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        isExpanded == account.accountNumber
+                            ? Column(
+                                children: [
+                                  const SizedBox(
+                                    height: 20,
+                                  ),
+                                  Container(
+                                    height: 1,
+                                    color: Colors.grey[300],
+                                  ),
+                                  const SizedBox(
+                                    height: 20,
+                                  ),
+                                  Container(
+                                    alignment: Alignment
+                                        .centerLeft, // Aligns text to the left
+                                    child: const Text(
+                                      "Account Details",
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF444750),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    height: 10,
+                                  ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment
+                                        .spaceBetween, // Centers horizontally
+                                    children: [
+                                      Text(
+                                        "Total Transactions",
+                                        style: TextStyle(
+                                          color: Color(0xFF181F2A),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      Text(
+                                          account.totalTransactions
+                                              .toInt()
+                                              .toString(),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          )),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      isExpanded == account.accountNumber
-                          ? Column(
-                              children: [
-                                const SizedBox(
-                                  height: 20,
-                                ),
-                                Container(
-                                  height: 1,
-                                  color: Colors.grey[300],
-                                ),
-                                const SizedBox(
-                                  height: 20,
-                                ),
-                                Container(
-                                  alignment: Alignment
-                                      .centerLeft, // Aligns text to the left
-                                  child: const Text(
-                                    "Account Details",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF444750),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(
-                                  height: 10,
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment
-                                      .spaceBetween, // Centers horizontally
-                                  children: [
-                                    Text(
-                                      "Total Transactions",
-                                      style: TextStyle(
-                                        color: Color(0xFF181F2A),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                        account.totalTransactions
-                                            .toInt()
-                                            .toString(),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        )),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment
-                                      .spaceBetween, // Centers horizontally
-                                  children: [
-                                    Text(
-                                      "Total Credit",
-                                      style: TextStyle(
-                                        color: Color(0xFF181F2A),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                        formatNumberWithComma(
-                                                account.totalCredit) +
-                                            " ETB",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: Color(0xFF181F2A),
-                                        )),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment
-                                      .spaceBetween, // Centers horizontally
-                                  children: [
-                                    Text(
-                                      "Total Debit",
-                                      style: TextStyle(
-                                        color: Color(0xFF181F2A),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                        formatNumberWithComma(
-                                                account.totalDebit) +
-                                            " ETB",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment
+                                        .spaceBetween, // Centers horizontally
+                                    children: [
+                                      Text(
+                                        "Total Credit",
+                                        style: TextStyle(
                                           color: Color(0xFF181F2A),
                                           fontSize: 13,
-                                        )),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Container(
-                                  height: 1,
-                                  color: Colors.grey[300],
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment
-                                      .spaceBetween, // Centers horizontally
-                                  children: [
-                                    Text(
-                                      "Total Balance",
-                                      style: TextStyle(
-                                        color: Color(0xFF181F2A),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                        formatNumberWithComma(account.balance) +
-                                            " ETB",
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: Color(0xFF181F2A),
-                                        )),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                SizedBox(
-                                  width: double
-                                      .infinity, // Makes the button take full width
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              AccountDetailPage(
-                                            accountNumber:
-                                                account.accountNumber,
-                                            bankId: account.bankId,
-                                          ),
                                         ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 12),
-                                      backgroundColor: Color(0xffF1F4FF),
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      alignment: Alignment.center,
-                                    ),
-                                    child: const Text(
-                                      "Show Transaction History",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: Color(0xFF444750),
-                                        fontSize: 14,
+                                      Text(
+                                          formatNumberWithComma(
+                                                  account.totalCredit) +
+                                              " ETB",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Color(0xFF181F2A),
+                                          )),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment
+                                        .spaceBetween, // Centers horizontally
+                                    children: [
+                                      Text(
+                                        "Total Debit",
+                                        style: TextStyle(
+                                          color: Color(0xFF181F2A),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      Text(
+                                          formatNumberWithComma(
+                                                  account.totalDebit) +
+                                              " ETB",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF181F2A),
+                                            fontSize: 13,
+                                          )),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    height: 1,
+                                    color: Colors.grey[300],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment
+                                        .spaceBetween, // Centers horizontally
+                                    children: [
+                                      Text(
+                                        "Total Balance",
+                                        style: TextStyle(
+                                          color: Color(0xFF181F2A),
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      Text(
+                                          formatNumberWithComma(
+                                                  account.balance) +
+                                              " ETB",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Color(0xFF181F2A),
+                                          )),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    width: double
+                                        .infinity, // Makes the button take full width
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                AccountDetailPage(
+                                              accountNumber:
+                                                  account.accountNumber,
+                                              bankId: account.bankId,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 12),
+                                        backgroundColor: Color(0xffF1F4FF),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        alignment: Alignment.center,
+                                      ),
+                                      child: const Text(
+                                        "Show Transaction History",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Color(0xFF444750),
+                                          fontSize: 14,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            )
-                          : Container(),
-                    ],
+                                ],
+                              )
+                            : Container(),
+                      ],
+                    ),
                   ),
+                  const SizedBox(
+                    height: 13,
+                  )
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, AccountSummary account) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Delete Account',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF444750),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to delete this account?',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF444750),
                 ),
               ),
-              const SizedBox(
-                height: 13,
-              )
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Account Number: ${account.accountNumber}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF444750),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Account Holder: ${account.accountHolderName}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF444750),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Bank: ${AppConstants.banks.firstWhere((element) => element.id == account.bankId).name}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF444750),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'This action cannot be undone.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.red[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ],
-          );
-        },
-      ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Color(0xFF444750),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await _deleteAccount(context, account);
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                  color: Colors.red[600],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> _deleteAccount(
+      BuildContext context, AccountSummary account) async {
+    try {
+      final accountRepo = AccountRepository();
+      await accountRepo.deleteAccount(account.accountNumber, account.bankId);
+
+      // Reload data to reflect the deletion
+      if (mounted) {
+        Provider.of<TransactionProvider>(context, listen: false).loadData();
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Account deleted successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print("debug: Error deleting account: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting account: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 }

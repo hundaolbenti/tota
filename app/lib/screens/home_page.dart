@@ -298,10 +298,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     final tabId = tabs[index];
                     return RefreshIndicator(
                       onRefresh: () async {
+                        // Sync regex patterns from remote
+                        final configService = SmsConfigService();
+                        try {
+                          await configService.syncRemoteConfig();
+                        } catch (e) {
+                          print("debug: Error syncing patterns: $e");
+                        }
+
+                        // Reload transaction data
                         await provider.loadData();
-                        // await _syncService.syncTransactions();
+
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Page Refreshed')));
+                          // style it
+                          SnackBar(
+                            content: const Text(
+                              'Sweet!',
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.white),
+                            ),
+                            backgroundColor: Colors.blue[200],
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
                       },
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),

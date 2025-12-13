@@ -73,4 +73,13 @@ class AccountRepository {
     final db = await DatabaseHelper.instance.database;
     await db.delete('accounts');
   }
+
+  Future<void> deleteAccount(String accountNumber, int bank) async {
+    final db = await DatabaseHelper.instance.database;
+    await db.delete(
+      'accounts',
+      where: 'accountNumber = ? AND bank = ?',
+      whereArgs: [accountNumber, bank],
+    );
+  }
 }

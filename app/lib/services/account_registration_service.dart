@@ -4,30 +4,32 @@ import 'package:totals/models/account.dart';
 import 'package:totals/repositories/account_repository.dart';
 import 'package:totals/services/sms_service.dart';
 import 'package:totals/services/sms_config_service.dart';
+import 'package:totals/services/account_sync_status_service.dart';
 import 'package:totals/utils/pattern_parser.dart';
 
 class AccountRegistrationService {
   final AccountRepository _accountRepo = AccountRepository();
+  final AccountSyncStatusService _syncStatusService =
+      AccountSyncStatusService.instance;
 
   /// Registers a new account and optionally syncs previous SMS messages
-  Future<void> registerAccount({
+  /// Returns the account if created successfully
+  Future<Account?> registerAccount({
     required String accountNumber,
     required String accountHolderName,
     required int bankId,
     bool syncPreviousSms = true,
     Function(String stage, double progress)? onProgress,
+    Function()? onSyncComplete,
   }) async {
     // Check if account already exists
-    onProgress?.call("Checking account...", 0.1);
     final exists = await _accountRepo.accountExists(accountNumber, bankId);
     if (exists) {
       print("debug: Account $accountNumber for bank $bankId already exists");
-      onProgress?.call("Account already exists", 1.0);
-      return;
+      return null;
     }
 
-    // Create and save the account
-    onProgress?.call("Registering account...", 0.2);
+    // Create and save the account immediately
     final account = Account(
       accountNumber: accountNumber,
       bank: bankId,
@@ -37,19 +39,31 @@ class AccountRegistrationService {
     await _accountRepo.saveAccount(account);
     print("debug: Account registered: $accountNumber");
 
-    // Sync previous SMS if requested
+    // Sync previous SMS in background if requested
     if (syncPreviousSms) {
-      await _syncPreviousSms(bankId, onProgress);
-    } else {
-      onProgress?.call("Complete!", 1.0);
+      // Start sync in background (don't await)
+      _syncPreviousSms(bankId, accountNumber, onProgress).then((_) {
+        onSyncComplete?.call();
+      }).catchError((e) {
+        print("debug: Error syncing SMS in background: $e");
+        onProgress?.call("Sync failed: $e", 1.0);
+        onSyncComplete?.call();
+      });
     }
+
+    return account;
   }
 
   /// Syncs and parses previous SMS messages from the bank
   Future<void> _syncPreviousSms(
     int bankId,
+    String accountNumber,
     Function(String stage, double progress)? onProgress,
   ) async {
+    // Set initial sync status
+    _syncStatusService.setSyncStatus(accountNumber, bankId, "Starting sync...");
+    _syncStatusService.setSyncStatus(
+        accountNumber, bankId, "Finding bank messages...");
     onProgress?.call("Finding bank messages...", 0.3);
     final bank = AppConstants.banks.firstWhere(
       (element) => element.id == bankId,
@@ -59,6 +73,8 @@ class AccountRegistrationService {
     final bankCodes = bank.codes;
     print("debug: Syncing SMS for bank ${bank.name} with codes: $bankCodes");
 
+    _syncStatusService.setSyncStatus(
+        accountNumber, bankId, "Fetching SMS messages...");
     onProgress?.call("Fetching SMS messages...", 0.4);
 
     // Get all messages from the bank
@@ -78,6 +94,7 @@ class AccountRegistrationService {
         sortOrder: [
           OrderBy(SmsColumn.DATE, sort: Sort.DESC),
         ],
+        filter: SmsFilter.where(SmsColumn.ADDRESS).like('%${bankCodes[0]}%'),
       );
 
       // Filter messages that match any bank code
@@ -105,10 +122,13 @@ class AccountRegistrationService {
     print("debug: Found ${messages.length} unique messages from ${bank.name}");
 
     if (messages.isEmpty) {
+      _syncStatusService.clearSyncStatus(accountNumber, bankId);
       onProgress?.call("No messages found", 1.0);
       return;
     }
 
+    _syncStatusService.setSyncStatus(
+        accountNumber, bankId, "Loading patterns...");
     onProgress?.call("Loading parsing patterns...", 0.5);
 
     // Load patterns for this bank
@@ -118,79 +138,110 @@ class AccountRegistrationService {
 
     if (relevantPatterns.isEmpty) {
       print("debug: No patterns found for bank $bankId, skipping parsing");
+      _syncStatusService.clearSyncStatus(accountNumber, bankId);
       onProgress?.call("No patterns found", 1.0);
       return;
     }
 
+    _syncStatusService.setSyncStatus(
+        accountNumber, bankId, "Parsing messages...");
     onProgress?.call("Parsing messages...", 0.6);
 
-    // Process each message
+    // Process messages in batches for better performance
     int processedCount = 0;
     int skippedCount = 0;
     final totalMessages = messages.length;
+    const int batchSize = 10; // Process 10 messages concurrently
 
     // Track the latest message with balance for account update
     Map<String, dynamic>? latestBalanceDetails;
     String? latestAccountNumber;
 
-    for (int i = 0; i < messages.length; i++) {
-      final message = messages[i];
+    // Process messages in batches
+    for (int batchStart = 0;
+        batchStart < messages.length;
+        batchStart += batchSize) {
+      final batchEnd = (batchStart + batchSize < messages.length)
+          ? batchStart + batchSize
+          : messages.length;
+      final batch = messages.sublist(batchStart, batchEnd);
 
-      // Update progress based on message index
+      // Update progress
       final baseProgress = 0.6;
-      final messageProgress = (i + 1) / totalMessages;
-      final currentProgress = baseProgress + (messageProgress * 0.35);
+      final batchProgress = batchEnd / totalMessages;
+      final currentProgress = baseProgress + (batchProgress * 0.35);
+      final status = "Processing ${batchEnd}/$totalMessages messages...";
+      _syncStatusService.setSyncStatus(accountNumber, bankId, status);
       onProgress?.call(
-        "Processing message ${i + 1} of $totalMessages...",
+        "Processing messages ${batchStart + 1}-$batchEnd of $totalMessages...",
         currentProgress,
       );
 
-      if (message.body == null || message.address == null) {
-        skippedCount++;
-        continue;
-      }
+      // Process batch concurrently
+      final results = await Future.wait(
+        batch.map((message) async {
+          if (message.body == null || message.address == null) {
+            return {'status': 'skipped', 'details': null};
+          }
 
-      try {
-        // Check if message matches any pattern
-        final cleanedBody = configService.cleanSmsText(message.body!);
-        final details = PatternParser.extractTransactionDetails(
-          cleanedBody,
-          message.address!,
-          relevantPatterns,
-        );
+          try {
+            // Check if message matches any pattern
+            final cleanedBody = configService.cleanSmsText(message.body!);
+            final details = PatternParser.extractTransactionDetails(
+              cleanedBody,
+              message.address!,
+              relevantPatterns,
+            );
 
-        if (details != null) {
+            if (details != null) {
+              // Convert message date from milliseconds to DateTime
+              DateTime? messageDate;
+              if (message.date != null) {
+                messageDate =
+                    DateTime.fromMillisecondsSinceEpoch(message.date!);
+              }
+
+              // Process the message using the existing SmsService logic with message date
+              await SmsService.processMessage(
+                message.body!,
+                message.address!,
+                messageDate: messageDate,
+              );
+
+              return {'status': 'processed', 'details': details};
+            } else {
+              return {'status': 'skipped', 'details': null};
+            }
+          } catch (e) {
+            print("debug: Error processing message: $e");
+            return {'status': 'skipped', 'details': null};
+          }
+        }),
+      );
+
+      // Count results and track latest balance
+      for (var result in results) {
+        if (result['status'] == 'processed') {
+          processedCount++;
+          final details = result['details'] as Map<String, dynamic>?;
+
           // Track the latest message with balance (messages are sorted DESC, so first match is latest)
-          if (details['currentBalance'] != null &&
+          if (details != null &&
+              details['currentBalance'] != null &&
               latestBalanceDetails == null) {
             latestBalanceDetails = details;
             latestAccountNumber = details['accountNumber'];
           }
-
-          // Convert message date from milliseconds to DateTime
-          DateTime? messageDate;
-          if (message.date != null) {
-            messageDate = DateTime.fromMillisecondsSinceEpoch(message.date!);
-          }
-
-          // Process the message using the existing SmsService logic with message date
-          await SmsService.processMessage(
-            message.body!,
-            message.address!,
-            messageDate: messageDate,
-          );
-          processedCount++;
         } else {
           skippedCount++;
         }
-      } catch (e) {
-        print("debug: Error processing message: $e");
-        skippedCount++;
       }
     }
 
     // Update account balance from the latest message
     if (latestBalanceDetails != null) {
+      _syncStatusService.setSyncStatus(
+          accountNumber, bankId, "Updating balance...");
       onProgress?.call("Updating account balance...", 0.95);
       await _updateAccountBalanceFromLatestMessage(
         bankId,
@@ -199,6 +250,8 @@ class AccountRegistrationService {
       );
     }
 
+    // Clear sync status when complete
+    _syncStatusService.clearSyncStatus(accountNumber, bankId);
     onProgress?.call(
       "Complete! Processed $processedCount transactions",
       1.0,
@@ -207,6 +260,8 @@ class AccountRegistrationService {
     print(
         "debug: SMS sync complete - Processed: $processedCount, Skipped: $skippedCount");
   }
+
+  AccountSyncStatusService get syncStatusService => _syncStatusService;
 
   /// Updates account balance from the latest message
   Future<void> _updateAccountBalanceFromLatestMessage(

@@ -137,6 +137,7 @@ class SmsService {
     final relevantPatterns =
         patterns.where((p) => p.bankId == bank.id).toList();
     // 2. Parse
+    configService.debugSms(messageBody);
     var details = PatternParser.extractTransactionDetails(
         configService.cleanSmsText(messageBody),
         senderAddress,

@@ -122,6 +122,19 @@ class SmsConfigService {
       description: "Telebirr Received from Bank",
     ),
   ];
+  void debugSms(String smsText) {
+    // Show invisible characters
+    print("Raw SMS (escaped): ${jsonEncode(smsText)}");
+
+    // Optionally show code units for each character
+    print("Code units: ${smsText.codeUnits}");
+
+    // For more detailed view
+    for (int i = 0; i < smsText.length; i++) {
+      print("Char $i: '${smsText[i]}' -> ${smsText.codeUnitAt(i)}");
+    }
+  }
+
   String cleanSmsText(String text) {
     try {
       String jsonString = jsonEncode(text);

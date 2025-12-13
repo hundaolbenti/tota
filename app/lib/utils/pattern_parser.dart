@@ -50,6 +50,11 @@ class PatternParser {
                 extracted['accountNumber'] = raw.substring(raw.length - 4);
                 print(
                     "Cleaned account (masked): ${extracted['accountNumber']}");
+              }
+              if (pattern.bankId == 3) {
+                extracted['accountNumber'] = raw.substring(raw.length - 2);
+                print(
+                    "Cleaned account (masked): ${extracted['accountNumber']}");
               } else {
                 extracted['accountNumber'] = raw;
                 print(
@@ -89,7 +94,7 @@ class PatternParser {
           print("debug: receiver ${extracted["receiver"]}");
 
           // Validate required fields
-          if (pattern.bankId == 1 &&
+          if ((pattern.bankId == 1 || pattern.bankId == 3) &&
               (extracted['amount'] == null ||
                   extracted['currentBalance'] == null ||
                   extracted['accountNumber'] == null ||

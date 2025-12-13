@@ -22,9 +22,6 @@ class AppConstants {
       shortName: "CBE",
       codes: [
         "CBE",
-        "cbe",
-        "889",
-        "Commercial Bank Of Ethiopia",
       ],
       image: "assets/images/cbe.png",
     ),
@@ -44,9 +41,8 @@ class AppConstants {
       shortName: "BOA",
       codes: [
         "BOA",
-        "Bank Of Abyssinia",
       ],
-      image: "assets/images/coop.png",
+      image: "assets/images/boa.png",
     ),
     Bank(
       id: 4,
@@ -56,7 +52,7 @@ class AppConstants {
         "Dashen",
         "Dashen Bank",
       ],
-      image: "assets/images/global.png",
+      image: "assets/images/dashen.png",
     ),
     Bank(
       id: 6,
@@ -66,7 +62,6 @@ class AppConstants {
         "Telebirr",
         "telebirr",
         "127",
-        "+251943685872",
       ],
       image: "assets/images/telebirr.png",
     ),

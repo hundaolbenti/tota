@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:totals/providers/transaction_provider.dart';
+import 'package:totals/services/account_sync_status_service.dart';
 import 'package:totals/screens/home_page.dart';
 import 'package:totals/database/migration_helper.dart';
 
@@ -21,6 +22,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => TransactionProvider()),
+        ChangeNotifierProvider.value(value: AccountSyncStatusService.instance),
       ],
       child: MaterialApp(
         title: 'Totals',

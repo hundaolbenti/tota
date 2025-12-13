@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:totals/components/custom_inputfield.dart';
 import 'package:totals/data/consts.dart';
 import 'package:totals/widgets/banks_list.dart';
-import 'package:totals/widgets/account_loading_dialog.dart';
 import 'package:totals/services/account_registration_service.dart';
+import 'package:totals/providers/transaction_provider.dart';
 
 class RegisterAccountForm extends StatefulWidget {
   final void Function() onSubmit;
@@ -24,27 +25,41 @@ class _RegisterAccountFormState extends State<RegisterAccountForm> {
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      // Show loading dialog with progress
-      final result = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AccountLoadingDialog(
-          task: (onProgress) async {
-            final service = AccountRegistrationService();
-            await service.registerAccount(
-              accountNumber: _accountNumber.text,
-              accountHolderName: _accountHolderName.text,
-              bankId: selected_bank,
-              syncPreviousSms: syncPreviousSms,
-              onProgress: onProgress,
-            );
-          },
-        ),
-      );
+      try {
+        final service = AccountRegistrationService();
+        final provider =
+            Provider.of<TransactionProvider>(context, listen: false);
 
-      if (result == true && mounted) {
-        widget.onSubmit();
-        Navigator.pop(context);
+        // Create account immediately (don't await sync)
+        final account = await service.registerAccount(
+          accountNumber: _accountNumber.text,
+          accountHolderName: _accountHolderName.text,
+          bankId: selected_bank,
+          syncPreviousSms: syncPreviousSms,
+          onSyncComplete: () {
+            // Reload data when sync completes
+            provider.loadData();
+          },
+        );
+
+        if (account != null && mounted) {
+          // Refresh data to show new account
+          provider.loadData();
+          // Close drawer immediately
+          widget.onSubmit();
+          Navigator.pop(context);
+          // Sync will continue in background and update status in account cards
+        }
+      } catch (e) {
+        print("debug: Error registering account: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error registering account: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
