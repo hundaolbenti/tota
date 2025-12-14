@@ -26,6 +26,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   bool _leftButtonPressed = false;
   bool _rightButtonPressed = false;
   bool _isTransitioning = false;
+  bool _isLoadingData = false;
+  int? _pendingTimeFrameOffset; // Offset that will be applied after jumping to page 1
 
   @override
   void initState() {
@@ -87,43 +89,78 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     // Only update if we're not already transitioning
     if (_isTransitioning) return;
     
-    // Mark as transitioning to prevent multiple updates
+    // Mark as transitioning and loading to prevent multiple updates
     _isTransitioning = true;
+    setState(() {
+      _isLoadingData = true;
+    });
     
     // Defer state update until after animation completes (300ms) to prevent freezing
     // This allows the PageView animation to complete smoothly before triggering expensive rebuilds
     Future.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) {
         _isTransitioning = false;
+        _isLoadingData = false;
         return;
       }
       
       if (page == 0) {
         // Swiped to previous
-        setState(() {
-          _timeFrameOffset--;
-          _isTransitioning = false;
-        });
-        // Reset to middle page after a short delay to allow preloading
+        // Store the pending offset but don't apply it yet
+        _pendingTimeFrameOffset = _timeFrameOffset - 1;
+        // First, jump to middle page immediately to prevent showing wrong data
+        if (mounted && _timeFramePageController.hasClients) {
+          _timeFramePageController.jumpToPage(1);
+        }
+        // Then update the offset after a brief delay to allow the jump to complete
         Future.delayed(const Duration(milliseconds: 50), () {
-          if (mounted && _timeFramePageController.hasClients) {
-            _timeFramePageController.jumpToPage(1);
+          if (mounted) {
+            setState(() {
+              _timeFrameOffset = _pendingTimeFrameOffset!;
+              _pendingTimeFrameOffset = null;
+            });
+            // Clear loading state after data has settled
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                setState(() {
+                  _isTransitioning = false;
+                  _isLoadingData = false;
+                });
+              }
+            });
           }
         });
       } else if (page == 2) {
         // Swiped to next
-        setState(() {
-          _timeFrameOffset++;
-          _isTransitioning = false;
-        });
-        // Reset to middle page after a short delay to allow preloading
+        // Store the pending offset but don't apply it yet
+        _pendingTimeFrameOffset = _timeFrameOffset + 1;
+        // First, jump to middle page immediately to prevent showing wrong data
+        if (mounted && _timeFramePageController.hasClients) {
+          _timeFramePageController.jumpToPage(1);
+        }
+        // Then update the offset after a brief delay to allow the jump to complete
         Future.delayed(const Duration(milliseconds: 50), () {
-          if (mounted && _timeFramePageController.hasClients) {
-            _timeFramePageController.jumpToPage(1);
+          if (mounted) {
+            setState(() {
+              _timeFrameOffset = _pendingTimeFrameOffset!;
+              _pendingTimeFrameOffset = null;
+            });
+            // Clear loading state after data has settled
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted) {
+                setState(() {
+                  _isTransitioning = false;
+                  _isLoadingData = false;
+                });
+              }
+            });
           }
         });
       } else {
-        _isTransitioning = false;
+        setState(() {
+          _isTransitioning = false;
+          _isLoadingData = false;
+        });
       }
     });
   }
@@ -252,7 +289,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     if (_selectedBankFilter != null) const SizedBox(height: 24),
 
                     // Income/Expense Cards
-                    _buildIncomeExpenseCards(income, expenses),
+                    _isLoadingData 
+                        ? _buildLoadingIncomeExpenseCards()
+                        : _buildIncomeExpenseCards(income, expenses),
                     const SizedBox(height: 24),
 
                     // Chart Type Selector
@@ -273,7 +312,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     const SizedBox(height: 12),
 
                     // Transactions List
-                    _buildTransactionsList(filteredTransactions),
+                    _isLoadingData 
+                        ? _buildLoadingTransactionsList()
+                        : _buildTransactionsList(filteredTransactions),
                   ],
                 ),
               ),
@@ -763,7 +804,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 // Calculate the offset for this page
                 // Page 0 = previous (offset -1), Page 1 = current (offset 0), Page 2 = next (offset +1)
                 final pageOffset = pageIndex - 1;
-                final effectiveOffset = _timeFrameOffset + pageOffset;
+                
+                // Use pending offset if we're transitioning and on page 1 (the target page)
+                // Otherwise use current offset to prevent showing wrong data on edge pages
+                final effectiveOffset = (_pendingTimeFrameOffset != null && pageIndex == 1)
+                    ? _pendingTimeFrameOffset! + pageOffset
+                    : _timeFrameOffset + pageOffset;
+                
+                // Show loading indicator if data is being loaded
+                // Show on all pages during transition to prevent flash of wrong data
+                if (_isLoadingData) {
+                  return _buildLoadingChart();
+                }
                 
                 // Get chart data for this time frame
                 final pageData = _getChartDataForOffset(data, effectiveOffset);
@@ -831,6 +883,142 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       default:
         return 280;
     }
+  }
+
+  Widget _buildLoadingChart() {
+    return Container(
+      height: _getChartHeight(),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading...',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingIncomeExpenseCards() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildLoadingCard(),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildLoadingCard(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoadingCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 60,
+            height: 16,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: 100,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingTransactionsList() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 150,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 100,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 80,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   List<ChartDataPoint> _getChartDataForOffset(List<ChartDataPoint> baseData, int offset) {
