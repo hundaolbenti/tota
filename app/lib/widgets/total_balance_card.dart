@@ -8,12 +8,20 @@ class TotalBalanceCard extends StatefulWidget {
   final AllSummary? summary;
   final bool showBalance;
   final VoidCallback onToggleBalance;
+  final String title;
+  final String? subtitle;
+  final int gradientId;
+  final String logoAsset;
 
   const TotalBalanceCard({
     super.key,
     required this.summary,
     required this.showBalance,
     required this.onToggleBalance,
+    this.title = "TOTAL BALANCE",
+    this.subtitle,
+    this.gradientId = 99,
+    this.logoAsset = 'assets/images/logo.svg',
   });
 
   @override
@@ -25,9 +33,6 @@ class _TotalBalanceCardState extends State<TotalBalanceCard> {
 
   @override
   Widget build(BuildContext context) {
-    // 99 is the ID for the Totals Blue gradient in utils
-    const gradientId = 99;
-
     final displayBalance = widget.showBalance
         ? "${formatNumberWithComma(widget.summary?.totalBalance ?? 0.0)} ETB"
         : "******";
@@ -42,7 +47,7 @@ class _TotalBalanceCardState extends State<TotalBalanceCard> {
         margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          gradient: GradientUtils.getGradient(gradientId),
+          gradient: GradientUtils.getGradient(widget.gradientId),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
@@ -88,9 +93,9 @@ class _TotalBalanceCardState extends State<TotalBalanceCard> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              "TOTAL BALANCE",
-                              style: TextStyle(
+                             Text(
+                              widget.title,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -99,13 +104,19 @@ class _TotalBalanceCardState extends State<TotalBalanceCard> {
                             ),
                             Opacity(
                               opacity: 0.8,
-                              child: SvgPicture.asset(
-                                'assets/images/logo.svg',
-                                width: 24,
-                                height: 24,
-                                colorFilter: const ColorFilter.mode(
-                                    Colors.white, BlendMode.srcIn),
-                              ),
+                              child: widget.logoAsset.endsWith('.svg') 
+                                ? SvgPicture.asset(
+                                    widget.logoAsset,
+                                    width: 24,
+                                    height: 24,
+                                    colorFilter: const ColorFilter.mode(
+                                        Colors.white, BlendMode.srcIn),
+                                  )
+                                : Image.asset(
+                                    widget.logoAsset,
+                                    width: 32,
+                                    height: 32,
+                                  ),
                             )
                           ],
                         ),
@@ -198,7 +209,7 @@ class _TotalBalanceCardState extends State<TotalBalanceCard> {
 
                         // Stats / Info
                         Text(
-                          "${widget.summary?.banks ?? 0} Banks | ${widget.summary?.accounts ?? 0} Accounts",
+                          widget.subtitle ?? "${widget.summary?.banks ?? 0} Banks | ${widget.summary?.accounts ?? 0} Accounts",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.7),
                             fontSize: 13,
