@@ -109,15 +109,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ? 5000.0 
             : (chartData.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity);
 
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: SafeArea(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+        return SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                     // Header: Statistics Title
                     Center(
                       child: Text(
@@ -167,11 +166,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
                     // Transactions List
                     _buildTransactionsList(filteredTransactions),
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
             ),
-          ),
         );
       },
     );
