@@ -17,8 +17,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   String? _selectedCard; // null, 'Income', or 'Expense'
   String _selectedPeriod = 'Week'; // 'Week', 'Month', 'Year'
   int? _selectedBankFilter; // null for 'All', or bankId
+  String? _selectedAccountFilter; // null for 'All', or accountNumber
   String _sortBy = 'Date'; // 'Date', 'Amount', 'Reference'
-  String _chartType = 'Line Chart'; // 'Line Chart', 'Bar Chart', 'Pie Chart', 'Heatmap'
+  String _chartType = 'Line Chart'; // 'Line Chart', 'Bar Chart', 'Pie Chart', 'P&L Calendar'
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +27,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       builder: (context, provider, child) {
         final allTransactions = provider.allTransactions;
         final bankSummaries = provider.bankSummaries;
+        final accounts = provider.accountSummaries;
         
         // Filter transactions based on selected card, period, and bank
         final now = DateTime.now();
@@ -40,6 +42,29 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           
           // Filter by bank if selected
           bool matchesBank = _selectedBankFilter == null || t.bankId == _selectedBankFilter;
+          
+          // Filter by account if selected
+          bool matchesAccount = true;
+          if (_selectedAccountFilter != null && _selectedBankFilter != null) {
+            // Match account number (handle different bank matching logic)
+            final account = accounts.firstWhere(
+              (a) => a.accountNumber == _selectedAccountFilter && a.bankId == _selectedBankFilter,
+              orElse: () => accounts.firstWhere((a) => a.bankId == _selectedBankFilter, orElse: () => accounts.first),
+            );
+            
+            if (account.bankId == 1 && t.accountNumber != null && account.accountNumber.length >= 4) {
+              matchesAccount = t.accountNumber!.substring(t.accountNumber!.length - 4) ==
+                  account.accountNumber.substring(account.accountNumber.length - 4);
+            } else if (account.bankId == 4 && t.accountNumber != null && account.accountNumber.length >= 3) {
+              matchesAccount = t.accountNumber!.substring(t.accountNumber!.length - 3) ==
+                  account.accountNumber.substring(account.accountNumber.length - 3);
+            } else if (account.bankId == 3 && t.accountNumber != null && account.accountNumber.length >= 2) {
+              matchesAccount = t.accountNumber!.substring(t.accountNumber!.length - 2) ==
+                  account.accountNumber.substring(account.accountNumber.length - 2);
+            } else {
+              matchesAccount = t.accountNumber == account.accountNumber;
+            }
+          }
           
           // Filter by period
           bool matchesPeriod = true;
@@ -63,7 +88,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             matchesPeriod = false;
           }
           
-          return matchesCard && matchesBank && matchesPeriod;
+          return matchesCard && matchesBank && matchesAccount && matchesPeriod;
         }).toList();
         
         // Calculate totals for the selected type
@@ -79,7 +104,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             .fold(0.0, (sum, t) => sum + t.amount);
 
         // Get chart data based on selected period and filtered transactions
-        final chartData = _getChartData(filteredTransactions, _selectedPeriod, _selectedBankFilter);
+        final chartData = _getChartData(filteredTransactions, _selectedPeriod, _selectedBankFilter, _selectedAccountFilter);
         final maxValue = chartData.isEmpty 
             ? 5000.0 
             : (chartData.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity);
@@ -112,7 +137,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
                     // Bank Filter Selector
                     _buildFilterSection(bankSummaries),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+                    
+                    // Account Filter Selector (only show if bank is selected and has multiple accounts)
+                    if (_selectedBankFilter != null)
+                      _buildAccountFilterSection(accounts),
+                    if (_selectedBankFilter != null) const SizedBox(height: 24),
 
                     // Income/Expense Cards
                     _buildIncomeExpenseCards(income, expenses),
@@ -195,6 +225,30 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     // Filter by bank if selected
     if (_selectedBankFilter != null) {
       periodFiltered = periodFiltered.where((t) => t.bankId == _selectedBankFilter).toList();
+    }
+    
+    // Filter by account if selected
+    if (_selectedAccountFilter != null && _selectedBankFilter != null) {
+      final accounts = Provider.of<TransactionProvider>(context, listen: false).accountSummaries;
+      final account = accounts.firstWhere(
+        (a) => a.accountNumber == _selectedAccountFilter && a.bankId == _selectedBankFilter,
+        orElse: () => accounts.firstWhere((a) => a.bankId == _selectedBankFilter, orElse: () => accounts.first),
+      );
+      
+      periodFiltered = periodFiltered.where((t) {
+        if (account.bankId == 1 && t.accountNumber != null && account.accountNumber.length >= 4) {
+          return t.accountNumber!.substring(t.accountNumber!.length - 4) ==
+              account.accountNumber.substring(account.accountNumber.length - 4);
+        } else if (account.bankId == 4 && t.accountNumber != null && account.accountNumber.length >= 3) {
+          return t.accountNumber!.substring(t.accountNumber!.length - 3) ==
+              account.accountNumber.substring(account.accountNumber.length - 3);
+        } else if (account.bankId == 3 && t.accountNumber != null && account.accountNumber.length >= 2) {
+          return t.accountNumber!.substring(t.accountNumber!.length - 2) ==
+              account.accountNumber.substring(account.accountNumber.length - 2);
+        } else {
+          return t.accountNumber == account.accountNumber;
+        }
+      }).toList();
     }
     
     // Calculate income and expenses for the period
@@ -418,12 +472,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
           ),
           PopupMenuItem(
-            value: 'Heatmap',
+            value: 'P&L Calendar',
             child: Row(
               children: [
-                Icon(Icons.grid_view, size: 18),
+                Icon(Icons.calendar_today, size: 18),
                 const SizedBox(width: 12),
-                const Text('Heatmap'),
+                const Text('P&L Calendar'),
               ],
             ),
           ),
@@ -440,8 +494,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         return Icons.bar_chart;
       case 'Pie Chart':
         return Icons.pie_chart;
-      case 'Heatmap':
-        return Icons.grid_view;
+      case 'P&L Calendar':
+        return Icons.calendar_today;
       default:
         return Icons.show_chart;
     }
@@ -471,8 +525,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         return _buildBarChart(data, maxValue);
       case 'Pie Chart':
         return _buildPieChart(data);
-      case 'Heatmap':
-        return _buildHeatmap(data);
+      case 'P&L Calendar':
+        return _buildTradingPnL(data, maxValue);
       case 'Line Chart':
       default:
         return _buildLineChart(data, maxValue);
@@ -843,55 +897,214 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildHeatmap(List<ChartDataPoint> data) {
-    final maxValue = data.isEmpty
+  Widget _buildTradingPnL(List<ChartDataPoint> data, double maxValue) {
+    final allTransactions = Provider.of<TransactionProvider>(context, listen: false).allTransactions;
+    final now = DateTime.now();
+    
+    // Filter by bank and account
+    var filtered = allTransactions;
+    if (_selectedBankFilter != null) {
+      filtered = filtered.where((t) => t.bankId == _selectedBankFilter).toList();
+    }
+    
+    // Get the current month
+    final currentMonth = DateTime(now.year, now.month, 1);
+    final firstDayOfMonth = currentMonth;
+    final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+    final daysInMonth = lastDayOfMonth.day;
+    
+    // Calculate which day of the week the month starts on (Monday = 0)
+    final firstWeekday = (firstDayOfMonth.weekday - 1) % 7;
+    
+    // Calculate P&L for each day of the month
+    final dailyPnL = <DateTime, double>{};
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(now.year, now.month, day);
+      final dayTransactions = filtered.where((t) {
+        if (t.time == null) return false;
+        try {
+          final transactionDate = DateTime.parse(t.time!);
+          return transactionDate.year == date.year &&
+                 transactionDate.month == date.month &&
+                 transactionDate.day == date.day;
+        } catch (e) {
+          return false;
+        }
+      }).toList();
+      
+      final income = dayTransactions
+          .where((t) => t.type == 'CREDIT')
+          .fold(0.0, (sum, t) => sum + t.amount);
+      final expenses = dayTransactions
+          .where((t) => t.type == 'DEBIT')
+          .fold(0.0, (sum, t) => sum + t.amount);
+      
+      dailyPnL[date] = income - expenses;
+    }
+    
+    final maxPnL = dailyPnL.values.isEmpty
         ? 100.0
-        : data.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+        : dailyPnL.values.map((v) => v.abs()).reduce((a, b) => a > b ? a : b);
+    
+    // Calculate weeks needed
+    final totalCells = firstWeekday + daysInMonth;
+    final weeks = (totalCells / 7).ceil();
     
     return Container(
-      height: 280,
       padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: data.length > 7 ? 7 : data.length,
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
-        ),
-        itemCount: data.length,
-        itemBuilder: (context, index) {
-          final point = data[index];
-          final intensity = (point.value / maxValue).clamp(0.0, 1.0);
-          final isCurrentDay = index == _getCurrentDayIndex(data);
-          
-          return Container(
-            decoration: BoxDecoration(
-              color: isCurrentDay
-                  ? Colors.green.shade600
-                  : Colors.green.withOpacity(0.2 + intensity * 0.6),
-              borderRadius: BorderRadius.circular(8),
-              border: isCurrentDay
-                  ? Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    )
-                  : null,
-            ),
-            child: Center(
-              child: Text(
-                point.label,
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Month header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                DateFormat('MMMM yyyy').format(currentMonth),
                 style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isCurrentDay ? FontWeight.bold : FontWeight.w500,
-                  color: isCurrentDay
-                      ? Colors.white
-                      : Theme.of(context).colorScheme.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-            ),
-          );
-        },
+              // Legend
+              Row(
+                children: [
+                  _buildLegendItem('Profit', Colors.green),
+                  const SizedBox(width: 12),
+                  _buildLegendItem('Loss', Theme.of(context).colorScheme.error),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Calendar grid
+          Column(
+            children: [
+              // Day headers
+              Row(
+                children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) {
+                  return Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 8),
+              // Calendar days
+              ...List.generate(weeks, (weekIndex) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: List.generate(7, (dayIndex) {
+                      final cellIndex = weekIndex * 7 + dayIndex;
+                      final dayNumber = cellIndex - firstWeekday + 1;
+                      
+                      if (dayNumber < 1 || dayNumber > daysInMonth) {
+                        return Expanded(child: Container());
+                      }
+                      
+                      final date = DateTime(now.year, now.month, dayNumber);
+                      final pnl = dailyPnL[date] ?? 0.0;
+                      final isToday = date.year == now.year &&
+                                     date.month == now.month &&
+                                     date.day == now.day;
+                      final intensity = maxPnL > 0 ? (pnl.abs() / maxPnL).clamp(0.0, 1.0) : 0.0;
+                      final isPositive = pnl >= 0;
+                      final bgOpacity = 0.2 + intensity * 0.6;
+                      // Use white text when background is intense (opacity > 0.5)
+                      final useWhiteText = bgOpacity > 0.5;
+                      
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: isPositive
+                                  ? Colors.green.withOpacity(bgOpacity)
+                                  : Theme.of(context).colorScheme.error.withOpacity(bgOpacity),
+                              borderRadius: BorderRadius.circular(8),
+                              border: isToday
+                                  ? Border.all(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      width: 2,
+                                    )
+                                  : null,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '$dayNumber',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                                    color: useWhiteText
+                                        ? Colors.white
+                                        : Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                                if (pnl != 0)
+                                  Text(
+                                    '${pnl > 0 ? '+' : ''}${(pnl / 1000).toStringAsFixed(1)}k',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                      color: useWhiteText
+                                          ? Colors.white
+                                          : (isPositive ? Colors.green.shade700 : Theme.of(context).colorScheme.error),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 
@@ -901,7 +1114,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _buildFilterChip('All', _selectedBankFilter == null),
+          _buildFilterChip('All', _selectedBankFilter == null,
+            onTap: () => setState(() {
+              _selectedBankFilter = null;
+              _selectedAccountFilter = null;
+            }),
+          ),
           const SizedBox(width: 8),
           ...bankSummaries.map((bank) {
             final bankInfo = AppConstants.banks.firstWhere(
@@ -913,7 +1131,46 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               child: _buildFilterChip(
                 bankInfo.shortName,
                 _selectedBankFilter == bank.bankId,
-                onTap: () => setState(() => _selectedBankFilter = bank.bankId),
+                onTap: () => setState(() {
+                  _selectedBankFilter = bank.bankId;
+                  _selectedAccountFilter = null; // Reset account filter when bank changes
+                }),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountFilterSection(List accounts) {
+    // Filter accounts by selected bank
+    final bankAccounts = accounts.where((a) => a.bankId == _selectedBankFilter).toList();
+    
+    // Only show if there are multiple accounts
+    if (bankAccounts.length <= 1) {
+      return const SizedBox.shrink();
+    }
+    
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _buildFilterChip('All', _selectedAccountFilter == null,
+            onTap: () => setState(() => _selectedAccountFilter = null),
+          ),
+          const SizedBox(width: 8),
+          ...bankAccounts.map((account) {
+            final accountDisplay = account.accountNumber.length > 4
+                ? account.accountNumber.substring(account.accountNumber.length - 4)
+                : account.accountNumber;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _buildFilterChip(
+                accountDisplay,
+                _selectedAccountFilter == account.accountNumber,
+                onTap: () => setState(() => _selectedAccountFilter = account.accountNumber),
               ),
             );
           }),
@@ -1178,12 +1435,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     List<Transaction> transactions,
     String period,
     int? bankFilter,
+    String? accountFilter,
   ) {
     // Filter by bank if selected (transactions are already filtered by type)
     var filteredTransactions = transactions;
     if (bankFilter != null) {
       filteredTransactions = transactions.where((t) => t.bankId == bankFilter).toList();
     }
+    
+    // Filter by account if selected (account filtering is already done in main filter, but keep for consistency)
 
     if (period == 'Week') {
       return _getWeeklyData(filteredTransactions);
