@@ -15,7 +15,7 @@ class AnalyticsPage extends StatefulWidget {
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
   String? _selectedCard; // null, 'Income', or 'Expense'
-  String _selectedPeriod = 'Week'; // 'Week', 'Month', 'Year'
+  String _selectedPeriod = 'Month'; // 'Week', 'Month', 'Year'
   int? _selectedBankFilter; // null for 'All', or bankId
   String? _selectedAccountFilter; // null for 'All', or accountNumber
   String _sortBy = 'Date'; // 'Date', 'Amount', 'Reference'
@@ -672,6 +672,24 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Widget _buildBarChart(List<ChartDataPoint> data, double maxValue) {
+    if (data.isEmpty) {
+      return Container(
+        height: 280,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: Text(
+            'No data available',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+    
     // Get income and expense data separately by recalculating for each period point
     final allTransactions = Provider.of<TransactionProvider>(context, listen: false).allTransactions;
     
