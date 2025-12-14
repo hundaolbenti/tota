@@ -14,9 +14,10 @@ class AnalyticsPage extends StatefulWidget {
 }
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
-  String _selectedTab = 'Total'; // 'Total', 'Income', or 'Expense'
+  String? _selectedCard; // null, 'Income', or 'Expense'
   String _selectedPeriod = 'Week'; // 'Week', 'Month', 'Year'
   int? _selectedBankFilter; // null for 'All', or bankId
+  String _sortBy = 'Date'; // 'Date', 'Amount', 'Reference'
 
   @override
   Widget build(BuildContext context) {
@@ -25,15 +26,43 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         final allTransactions = provider.allTransactions;
         final bankSummaries = provider.bankSummaries;
         
-        // Filter transactions based on selected tab
+        // Filter transactions based on selected card, period, and bank
+        final now = DateTime.now();
         final filteredTransactions = allTransactions.where((t) {
-          if (_selectedTab == 'Total') {
-            return true; // Show all transactions
-          } else if (_selectedTab == 'Income') {
-            return t.type == 'CREDIT';
-          } else {
-            return t.type == 'DEBIT';
+          // Filter by selected card (Income/Expense)
+          bool matchesCard = true;
+          if (_selectedCard == 'Income') {
+            matchesCard = t.type == 'CREDIT';
+          } else if (_selectedCard == 'Expense') {
+            matchesCard = t.type == 'DEBIT';
           }
+          
+          // Filter by bank if selected
+          bool matchesBank = _selectedBankFilter == null || t.bankId == _selectedBankFilter;
+          
+          // Filter by period
+          bool matchesPeriod = true;
+          if (t.time != null) {
+            try {
+              final transactionDate = DateTime.parse(t.time!);
+              if (_selectedPeriod == 'Week') {
+                int daysSinceSaturday = (now.weekday + 1) % 7;
+                final weekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: daysSinceSaturday));
+                matchesPeriod = transactionDate.isAfter(weekStart.subtract(const Duration(days: 1))) &&
+                               transactionDate.isBefore(now.add(const Duration(days: 1)));
+              } else if (_selectedPeriod == 'Month') {
+                matchesPeriod = transactionDate.year == now.year && transactionDate.month == now.month;
+              } else if (_selectedPeriod == 'Year') {
+                matchesPeriod = transactionDate.year == now.year;
+              }
+            } catch (e) {
+              matchesPeriod = false;
+            }
+          } else {
+            matchesPeriod = false;
+          }
+          
+          return matchesCard && matchesBank && matchesPeriod;
         }).toList();
         
         // Calculate totals for the selected type
@@ -52,7 +81,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         final chartData = _getChartData(filteredTransactions, _selectedPeriod, _selectedBankFilter);
         final maxValue = chartData.isEmpty 
             ? 5000.0 
-            : chartData.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2;
+            : (chartData.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity);
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -76,24 +105,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Income/Expense Tabs
-                    _buildTabSelector(),
-                    const SizedBox(height: 24),
-
-                    // Summary Section - show selected type's total
-                    _buildSummarySection(income, expenses, selectedTotal, filteredTransactions.length),
-                    const SizedBox(height: 24),
-
-                    // Time Period Dropdown
+                    // Time Period Selector
                     _buildTimePeriodSelector(),
+                    const SizedBox(height: 24),
+
+                    // Bank Filter Selector
+                    _buildFilterSection(bankSummaries),
+                    const SizedBox(height: 24),
+
+                    // Income/Expense Cards
+                    _buildIncomeExpenseCards(income, expenses),
                     const SizedBox(height: 24),
 
                     // Chart
                     _buildChart(chartData, maxValue),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
-                    // Balance Section - filtered by selected type
-                    _buildBalanceSection(bankSummaries, filteredTransactions),
+                    // Transactions List Header with Sort By
+                    _buildTransactionsHeader(),
+                    const SizedBox(height: 12),
+
+                    // Transactions List
+                    _buildTransactionsList(filteredTransactions),
                   ],
                 ),
               ),
@@ -104,168 +137,170 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildTabSelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildTabButton('Total', _selectedTab == 'Total'),
-          ),
-          Expanded(
-            child: _buildTabButton('Income', _selectedTab == 'Income'),
-          ),
-          Expanded(
-            child: _buildTabButton('Expense', _selectedTab == 'Expense'),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildTabButton(String label, bool isSelected) {
-    return GestureDetector(
-      onTap: () => setState(() => _selectedTab = label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSummarySection(double income, double expenses, double selectedTotal, int transactionCount) {
-    if (_selectedTab == 'Total') {
-      return Column(
-        children: [
-          _buildSummaryRow(
-            'Income',
-            income,
-            Colors.blue,
-            isSelected: false,
-          ),
-          const SizedBox(height: 12),
-          _buildSummaryRow(
-            'Expenses',
-            expenses,
-            Colors.white,
-            isSelected: false,
-          ),
-        ],
-      );
-    } else {
-      // Show only the selected type
-      return _buildSummaryRow(
-        _selectedTab,
-        selectedTotal,
-        _selectedTab == 'Income' ? Colors.blue : Colors.white,
-        isSelected: true,
-      );
+  Widget _buildIncomeExpenseCards(double income, double expenses) {
+    // Filter transactions based on selected period for accurate totals
+    final allTransactions = Provider.of<TransactionProvider>(context, listen: false).allTransactions;
+    
+    // Filter by period
+    final now = DateTime.now();
+    List<Transaction> periodFiltered = [];
+    
+    if (_selectedPeriod == 'Week') {
+      int daysSinceSaturday = (now.weekday + 1) % 7;
+      final weekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: daysSinceSaturday));
+      periodFiltered = allTransactions.where((t) {
+        if (t.time == null) return false;
+        try {
+          final transactionDate = DateTime.parse(t.time!);
+          return transactionDate.isAfter(weekStart.subtract(const Duration(days: 1))) &&
+                 transactionDate.isBefore(now.add(const Duration(days: 1)));
+        } catch (e) {
+          return false;
+        }
+      }).toList();
+    } else if (_selectedPeriod == 'Month') {
+      final monthStart = DateTime(now.year, now.month, 1);
+      periodFiltered = allTransactions.where((t) {
+        if (t.time == null) return false;
+        try {
+          final transactionDate = DateTime.parse(t.time!);
+          return transactionDate.year == now.year && transactionDate.month == now.month;
+        } catch (e) {
+          return false;
+        }
+      }).toList();
+    } else { // Year
+      periodFiltered = allTransactions.where((t) {
+        if (t.time == null) return false;
+        try {
+          final transactionDate = DateTime.parse(t.time!);
+          return transactionDate.year == now.year;
+        } catch (e) {
+          return false;
+        }
+      }).toList();
     }
-  }
-
-  Widget _buildSummaryRow(String label, double amount, Color indicatorColor, {bool isSelected = false}) {
+    
+    // Filter by bank if selected
+    if (_selectedBankFilter != null) {
+      periodFiltered = periodFiltered.where((t) => t.bankId == _selectedBankFilter).toList();
+    }
+    
+    // Calculate income and expenses for the period
+    final periodIncome = periodFiltered
+        .where((t) => t.type == 'CREDIT')
+        .fold(0.0, (sum, t) => sum + t.amount);
+    final periodExpenses = periodFiltered
+        .where((t) => t.type == 'DEBIT')
+        .fold(0.0, (sum, t) => sum + t.amount);
+    
     return Row(
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: indicatorColor,
-            shape: BoxShape.circle,
-          ),
+        Expanded(
+          child: _buildIncomeExpenseCard('Income', periodIncome, Colors.green, 'Income'),
         ),
         const SizedBox(width: 12),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const Spacer(),
-        Text(
-          'ETB ${_formatCurrency(amount)}',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected 
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.onSurface,
-          ),
+        Expanded(
+          child: _buildIncomeExpenseCard('Expense', periodExpenses, Theme.of(context).colorScheme.error, 'Expense'),
         ),
       ],
     );
   }
 
-  Widget _buildTimePeriodSelector() {
+  Widget _buildIncomeExpenseCard(String label, double amount, Color color, String cardType) {
+    final isSelected = _selectedCard == cardType;
+    final isIncome = cardType == 'Income';
+    
     return GestureDetector(
       onTap: () {
-        showModalBottomSheet(
-          context: context,
-          builder: (context) {
-            return Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: ['Week', 'Month', 'Year'].map((period) {
-                  return ListTile(
-                    title: Text(period),
-                    onTap: () {
-                      setState(() => _selectedPeriod = period);
-                      Navigator.pop(context);
-                    },
-                  );
-                }).toList(),
-              ),
-            );
-          },
-        );
+        setState(() {
+          // Toggle selection: if already selected, unselect; otherwise select
+          _selectedCard = isSelected ? null : cardType;
+        });
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected
+              ? (isIncome ? Colors.green : Theme.of(context).colorScheme.error)
+              : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? Colors.transparent
+                : color.withOpacity(0.3),
+            width: isSelected ? 0 : 1,
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _selectedPeriod,
+              label,
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: isSelected
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.keyboard_arrow_down,
-              size: 20,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            const SizedBox(height: 8),
+            Text(
+              'ETB ${_formatCurrency(amount)}',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isSelected
+                    ? Colors.white
+                    : color,
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTimePeriodSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: ['Week', 'Month', 'Year'].map((period) {
+          final isSelected = _selectedPeriod == period;
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selectedPeriod = period);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                period,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -305,27 +340,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return Stack(
       children: [
         Container(
-          height: 320,
-          padding: const EdgeInsets.all(20),
+          height: 280,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.1),
-              width: 1,
-            ),
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
           ),
           child: LineChart(
             LineChartData(
               gridData: FlGridData(
                 show: true,
                 drawVerticalLine: false,
-                horizontalInterval: maxValue / 5,
+                horizontalInterval: (maxValue / 5).clamp(100.0, double.infinity),
                 getDrawingHorizontalLine: (value) {
                   return FlLine(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.15),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.08),
                     strokeWidth: 1,
-                    dashArray: [5, 5],
                   );
                 },
               ),
@@ -375,14 +405,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: maxValue / 5,
-                reservedSize: 50,
+                interval: (maxValue / 5).clamp(100.0, double.infinity),
+                reservedSize: 45,
                 getTitlesWidget: (value, meta) {
+                  if (value == 0) {
+                    return const SizedBox.shrink();
+                  }
                   return Text(
-                    'ETB ${(value / 1000).toStringAsFixed(0)}k',
+                    '${(value / 1000).toStringAsFixed(0)}k',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
                     ),
                   );
                 },
@@ -400,93 +433,44 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 return FlSpot(entry.key.toDouble(), entry.value.value);
               }).toList(),
               isCurved: true,
-              curveSmoothness: 0.35,
+              curveSmoothness: 0.5,
               color: Theme.of(context).colorScheme.primary,
-              barWidth: 4,
+              barWidth: 2.5,
               isStrokeCapRound: true,
               dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barData, index) {
-                  final isHighlighted = index == highestIndex || index == currentDayIndex;
-                  return FlDotCirclePainter(
-                    radius: isHighlighted ? 7 : 0,
-                    color: Theme.of(context).colorScheme.primary,
-                    strokeWidth: isHighlighted ? 4 : 0,
-                    strokeColor: Theme.of(context).scaffoldBackgroundColor,
-                  );
-                },
+                show: false,
               ),
               belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Theme.of(context).colorScheme.primary.withOpacity(0.4),
-                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    Theme.of(context).colorScheme.primary.withOpacity(0.0),
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                ),
+                show: false,
               ),
             ),
           ],
           lineTouchData: LineTouchData(
+            enabled: true,
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (touchedSpot) =>
-                  Theme.of(context).colorScheme.surfaceVariant,
+                  Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.9),
               tooltipRoundedRadius: 8,
-              tooltipPadding: const EdgeInsets.all(8),
+              tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            getTouchedSpotIndicator: (barData, spotIndexes) {
-              return spotIndexes.map((spotIndex) {
-                final spot = barData.spots[spotIndex];
-                return TouchedSpotIndicatorData(
-                  FlLine(
-                    color: Theme.of(context).colorScheme.primary,
-                    strokeWidth: 2,
-                  ),
-                  FlDotData(
-                    getDotPainter: (spot, percent, barData, index) {
-                      return FlDotCirclePainter(
-                        radius: 8,
-                        color: Theme.of(context).colorScheme.primary,
-                        strokeWidth: 3,
-                        strokeColor: Theme.of(context).scaffoldBackgroundColor,
-                      );
-                    },
-                  ),
-                );
-              }).toList();
-            },
           ),
             ),
           ),
         ),
-        // Value badge for highlighted point
-        if (data.isNotEmpty && highestIndex < data.length)
+        // Highlight current day with a dot
+        if (data.isNotEmpty && currentDayIndex < data.length)
           Positioned(
-            left: 20 + (highestIndex / (data.length - 1).clamp(1, double.infinity)) * (MediaQuery.of(context).size.width - 120),
-            top: 20 + (1 - (highestValue / maxValue)) * 280 - 50,
+            left: 16 + (currentDayIndex / (data.length - 1).clamp(1, double.infinity)) * (MediaQuery.of(context).size.width - 100),
+            top: 20 + (1 - (data[currentDayIndex].value / maxValue)) * 240 - 6,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              width: 12,
+              height: 12,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                '${_selectedTab == 'Income' ? '+' : _selectedTab == 'Expense' ? '-' : ''}ETB ${_formatCurrency(highestValue)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  width: 2,
                 ),
               ),
             ),
@@ -495,67 +479,254 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildBalanceSection(List bankSummaries, List<Transaction> filteredTransactions) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildFilterSection(List bankSummaries) {
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _buildFilterChip('All', _selectedBankFilter == null),
+          const SizedBox(width: 8),
+          ...bankSummaries.map((bank) {
+            final bankInfo = AppConstants.banks.firstWhere(
+              (b) => b.id == bank.bankId,
+              orElse: () => AppConstants.banks.first,
+            );
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _buildFilterChip(
+                bankInfo.shortName,
+                _selectedBankFilter == bank.bankId,
+                onTap: () => setState(() => _selectedBankFilter = bank.bankId),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionsHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Header
         Text(
-          'Balance',
+          'Transactions',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 12),
+        _buildSortByDropdown(),
+      ],
+    );
+  }
 
-        // Filter Tabs
-        SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildFilterChip('All', _selectedBankFilter == null),
-              const SizedBox(width: 8),
-              ...bankSummaries.map((bank) {
-                final bankInfo = AppConstants.banks.firstWhere(
-                  (b) => b.id == bank.bankId,
-                  orElse: () => AppConstants.banks.first,
-                );
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _buildFilterChip(
-                    bankInfo.shortName,
-                    _selectedBankFilter == bank.bankId,
-                    onTap: () => setState(() => _selectedBankFilter = bank.bankId),
-                  ),
-                );
-              }),
-            ],
+  Widget _buildSortByDropdown() {
+    return PopupMenuButton<String>(
+      icon: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.sort,
+            size: 18,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
+          const SizedBox(width: 4),
+          Text(
+            'Sort by',
+            style: TextStyle(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+      onSelected: (value) {
+        setState(() {
+          _sortBy = value;
+        });
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'Date',
+          child: Text('Date'),
         ),
-        const SizedBox(height: 16),
-
-        // Bank Cards - show filtered totals
-        SizedBox(
-          height: 120,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: bankSummaries.map((bank) {
-              final bankInfo = AppConstants.banks.firstWhere(
-                (b) => b.id == bank.bankId,
-                orElse: () => AppConstants.banks.first,
-              );
-              // Calculate total for this bank based on selected type
-              final bankTotal = filteredTransactions
-                  .where((t) => t.bankId == bank.bankId)
-                  .fold(0.0, (sum, t) => sum + t.amount);
-              return _buildBankCard(bankInfo.shortName, bankTotal);
-            }).toList(),
-          ),
+        const PopupMenuItem(
+          value: 'Amount',
+          child: Text('Amount'),
+        ),
+        const PopupMenuItem(
+          value: 'Reference',
+          child: Text('Reference'),
         ),
       ],
+    );
+  }
+
+  Widget _buildTransactionsList(List<Transaction> transactions) {
+    // Sort transactions (already filtered by tab and bank)
+    final sortedTransactions = List<Transaction>.from(transactions);
+    sortedTransactions.sort((a, b) {
+      switch (_sortBy) {
+        case 'Amount':
+          return b.amount.compareTo(a.amount); // Descending
+        case 'Reference':
+          return a.reference.compareTo(b.reference);
+        case 'Date':
+        default:
+          // Sort by date, most recent first
+          if (a.time == null && b.time == null) return 0;
+          if (a.time == null) return 1;
+          if (b.time == null) return -1;
+          try {
+            final dateA = DateTime.parse(a.time!);
+            final dateB = DateTime.parse(b.time!);
+            return dateB.compareTo(dateA); // Descending
+          } catch (e) {
+            return 0;
+          }
+      }
+    });
+
+    if (sortedTransactions.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Text(
+            'No transactions found',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: sortedTransactions.length,
+      itemBuilder: (context, index) {
+        final transaction = sortedTransactions[index];
+        return _buildTransactionItem(transaction);
+      },
+    );
+  }
+
+  Widget _buildTransactionItem(Transaction transaction) {
+    final isCredit = transaction.type == 'CREDIT';
+    final dateTime = transaction.time != null
+        ? (() {
+            try {
+              return DateTime.parse(transaction.time!);
+            } catch (e) {
+              return null;
+            }
+          })()
+        : null;
+    final dateStr = dateTime != null
+        ? DateFormat('MMM dd, yyyy').format(dateTime)
+        : 'Unknown date';
+    final timeStr = dateTime != null
+        ? DateFormat('hh:mm a').format(dateTime)
+        : '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      transaction.reference,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (transaction.creditor != null || transaction.receiver != null)
+                      const SizedBox(height: 4),
+                    if (transaction.creditor != null)
+                      Text(
+                        transaction.creditor!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (transaction.receiver != null)
+                      Text(
+                        transaction.receiver!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${isCredit ? '+' : '-'}ETB ${_formatCurrency(transaction.amount)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isCredit
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  if (dateTime != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      dateStr,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (timeStr.isNotEmpty)
+                      Text(
+                        timeStr,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -586,38 +757,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildBankCard(String title, double value) {
-    return Container(
-      width: 150,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          Text(
-            'ETB ${_formatCurrency(value)}',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   List<ChartDataPoint> _getChartData(
     List<Transaction> transactions,
