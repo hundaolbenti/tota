@@ -548,3 +548,4 @@ class PnLCalendarChart extends StatelessWidget {
     );
   }
 }
+

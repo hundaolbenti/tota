@@ -477,3 +477,4 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 }
+
