@@ -4,7 +4,7 @@
 
 ## Screenshots
 
-<div align="center">
+<!-- <div align="center">
   <img src="screenshots/1.jpg" alt="Screenshot 1" width="200"/>
   <img src="screenshots/2.jpg" alt="Screenshot 2" width="200"/>
   <img src="screenshots/3.jpg" alt="Screenshot 3" width="200"/>
@@ -14,31 +14,31 @@
   <img src="screenshots/4.jpg" alt="Screenshot 4" width="200"/>
   <img src="screenshots/5.jpg" alt="Screenshot 5" width="200"/>
   <img src="screenshots/6.jpg" alt="Screenshot 6" width="200"/>
-</div>
+</div> -->
 
-<!-- <table>
+<table>
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/249ace73-9e5d-412b-87c3-942bfa7b4f4e" width="100%" alt="Image 1"/>
+      <img src="screenshots/1.jpg" width="100%" alt="Image 1"/>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/0f96ee6c-ba56-4c33-b4fd-a514d2f6ad34" width="100%" alt="Image 2"/>
+      <img src="screenshots/2.jpg" width="100%" alt="Image 2"/>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/a2861863-ecfa-4e13-9621-14b3809d40b3" width="100%" alt="Image 3"/>
+      <img src="screenshots/3.jpg" width="100%" alt="Image 3"/>
     </td>
   </tr>
   
   <tr>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/1ed8e6ce-948f-4de1-8b72-48d72056f68f" width="100%" alt="Image 4"/>
+      <img src="screenshots/4.jpg" width="100%" alt="Image 4"/>
     </td>
     <td align="center">
-      <img src="https://github.com/user-attachments/assets/4b720d83-4f1f-4dcf-8f07-d68318821464" width="100%" alt="Image 5"/>
+      <img src="screenshots/5.jpg" width="100%" alt="Image 5"/>
     </td>
     <td></td> 
   </tr>
-</table> -->
+</table> 
 
 
 
