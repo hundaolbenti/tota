@@ -16,7 +16,7 @@
   <img src="screenshots/6.jpg" alt="Screenshot 6" width="200"/>
 </div>
 
-<table>
+<!-- <table>
   <tr>
     <td align="center">
       <img src="https://github.com/user-attachments/assets/249ace73-9e5d-412b-87c3-942bfa7b4f4e" width="100%" alt="Image 1"/>
@@ -38,7 +38,7 @@
     </td>
     <td></td> 
   </tr>
-</table>
+</table> -->
 
 
 
