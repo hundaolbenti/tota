@@ -8,7 +8,6 @@ import 'package:totals/widgets/analytics/income_expense_cards.dart';
 import 'package:totals/widgets/analytics/chart_type_selector.dart';
 import 'package:totals/widgets/analytics/chart_container.dart';
 import 'package:totals/widgets/analytics/transactions_list.dart';
-import 'package:totals/widgets/analytics/loading_states.dart';
 import 'package:totals/widgets/analytics/chart_data_point.dart';
 import 'package:totals/widgets/analytics/chart_data_utils.dart';
 
@@ -30,8 +29,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   late PageController _timeFramePageController;
   bool _isTransitioning = false;
-  bool _isLoadingData = false;
-  int? _pendingTimeFrameOffset;
 
   @override
   void initState() {
@@ -86,67 +83,27 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   void _onTimeFramePageChanged(int page) {
     if (_isTransitioning) return;
 
-    _isTransitioning = true;
-    setState(() {
-      _isLoadingData = true;
-    });
+    // Only handle edge pages (0 = previous, 2 = next)
+    if (page == 0 || page == 2) {
+      _isTransitioning = true;
+      final newOffset = page == 0 ? _timeFrameOffset - 1 : _timeFrameOffset + 1;
 
-    Future.delayed(const Duration(milliseconds: 350), () {
-      if (!mounted) {
-        _isTransitioning = false;
-        _isLoadingData = false;
-        return;
-      }
+      // Update offset and jump back to center in one frame
+      setState(() {
+        _timeFrameOffset = newOffset;
+      });
 
-      if (page == 0) {
-        _pendingTimeFrameOffset = _timeFrameOffset - 1;
+      // Jump back to center page after the frame renders
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _timeFramePageController.hasClients) {
           _timeFramePageController.jumpToPage(1);
         }
+        // Small delay to prevent rapid consecutive swipes from breaking
         Future.delayed(const Duration(milliseconds: 50), () {
-          if (mounted) {
-            setState(() {
-              _timeFrameOffset = _pendingTimeFrameOffset!;
-              _pendingTimeFrameOffset = null;
-            });
-            Future.delayed(const Duration(milliseconds: 100), () {
-              if (mounted) {
-                setState(() {
-                  _isTransitioning = false;
-                  _isLoadingData = false;
-                });
-              }
-            });
-          }
-        });
-      } else if (page == 2) {
-        _pendingTimeFrameOffset = _timeFrameOffset + 1;
-        if (mounted && _timeFramePageController.hasClients) {
-          _timeFramePageController.jumpToPage(1);
-        }
-        Future.delayed(const Duration(milliseconds: 50), () {
-          if (mounted) {
-            setState(() {
-              _timeFrameOffset = _pendingTimeFrameOffset!;
-              _pendingTimeFrameOffset = null;
-            });
-            Future.delayed(const Duration(milliseconds: 100), () {
-              if (mounted) {
-                setState(() {
-                  _isTransitioning = false;
-                  _isLoadingData = false;
-                });
-              }
-            });
-          }
-        });
-      } else {
-        setState(() {
           _isTransitioning = false;
-          _isLoadingData = false;
         });
-      }
-    });
+      });
+    }
   }
 
   List<Transaction> _filterTransactions(
@@ -408,20 +365,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     ),
                     if (_selectedBankFilter != null) const SizedBox(height: 16),
                     const SizedBox(height: 24),
-                    _isLoadingData
-                        ? const LoadingIncomeExpenseCards()
-                        : IncomeExpenseCards(
-                            selectedCard: _selectedCard,
-                            selectedPeriod: _selectedPeriod,
-                            selectedBankFilter: _selectedBankFilter,
-                            selectedAccountFilter: _selectedAccountFilter,
-                            getBaseDate: _getBaseDate,
-                            onCardSelected: (card) {
-                              setState(() {
-                                _selectedCard = card;
-                              });
-                            },
-                          ),
+                    IncomeExpenseCards(
+                      selectedCard: _selectedCard,
+                      selectedPeriod: _selectedPeriod,
+                      selectedBankFilter: _selectedBankFilter,
+                      selectedAccountFilter: _selectedAccountFilter,
+                      getBaseDate: _getBaseDate,
+                      onCardSelected: (card) {
+                        setState(() {
+                          _selectedCard = card;
+                        });
+                      },
+                    ),
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -443,8 +398,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       chartType: _chartType,
                       selectedPeriod: _selectedPeriod,
                       timeFrameOffset: _timeFrameOffset,
-                      pendingTimeFrameOffset: _pendingTimeFrameOffset,
-                      isLoadingData: _isLoadingData,
                       timeFramePageController: _timeFramePageController,
                       onTimeFramePageChanged: _onTimeFramePageChanged,
                       getBaseDate: _getBaseDate,
@@ -456,17 +409,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       onNavigateTimeFrame: _navigateTimeFrame,
                     ),
                     const SizedBox(height: 24),
-                    _isLoadingData
-                        ? const LoadingTransactionsList()
-                        : TransactionsList(
-                            transactions: filteredTransactions,
-                            sortBy: _sortBy,
-                            onSortChanged: (sort) {
-                              setState(() {
-                                _sortBy = sort;
-                              });
-                            },
-                          ),
+                    TransactionsList(
+                      transactions: filteredTransactions,
+                      sortBy: _sortBy,
+                      onSortChanged: (sort) {
+                        setState(() {
+                          _sortBy = sort;
+                        });
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -477,4 +428,3 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 }
-

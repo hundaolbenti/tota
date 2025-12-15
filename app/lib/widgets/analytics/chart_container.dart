@@ -4,7 +4,6 @@ import 'charts/line_chart_widget.dart';
 import 'charts/bar_chart_widget.dart';
 import 'charts/pie_chart_widget.dart';
 import 'charts/pnl_calendar_chart.dart';
-import 'loading_states.dart';
 
 class ChartContainer extends StatefulWidget {
   final List<ChartDataPoint> data;
@@ -12,12 +11,11 @@ class ChartContainer extends StatefulWidget {
   final String chartType;
   final String selectedPeriod;
   final int timeFrameOffset;
-  final int? pendingTimeFrameOffset;
-  final bool isLoadingData;
   final PageController timeFramePageController;
   final ValueChanged<int> onTimeFramePageChanged;
   final DateTime Function(int?) getBaseDate;
-  final List<ChartDataPoint> Function(List<ChartDataPoint>, int) getChartDataForOffset;
+  final List<ChartDataPoint> Function(List<ChartDataPoint>, int)
+      getChartDataForOffset;
   final String? selectedCard;
   final int? selectedBankFilter;
   final String? selectedAccountFilter;
@@ -31,8 +29,6 @@ class ChartContainer extends StatefulWidget {
     required this.chartType,
     required this.selectedPeriod,
     required this.timeFrameOffset,
-    required this.pendingTimeFrameOffset,
-    required this.isLoadingData,
     required this.timeFramePageController,
     required this.onTimeFramePageChanged,
     required this.getBaseDate,
@@ -61,7 +57,8 @@ class _ChartContainerState extends State<ChartContainer> {
     }
   }
 
-  Widget _buildChart(List<ChartDataPoint> data, double maxValue, DateTime baseDate) {
+  Widget _buildChart(
+      List<ChartDataPoint> data, double maxValue, DateTime baseDate) {
     if (data.isEmpty) {
       return Container(
         height: _getChartHeight(),
@@ -155,7 +152,10 @@ class _ChartContainerState extends State<ChartContainer> {
                         color: Theme.of(context).colorScheme.surface,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.2),
                           width: 1,
                         ),
                         boxShadow: [
@@ -198,7 +198,10 @@ class _ChartContainerState extends State<ChartContainer> {
                         color: Theme.of(context).colorScheme.surface,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.2),
                           width: 1,
                         ),
                         boxShadow: [
@@ -223,9 +226,11 @@ class _ChartContainerState extends State<ChartContainer> {
               GestureDetector(
                 onTap: widget.onResetTimeFrame,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -261,21 +266,20 @@ class _ChartContainerState extends State<ChartContainer> {
               itemCount: 3,
               itemBuilder: (context, pageIndex) {
                 final pageOffset = pageIndex - 1;
-                final effectiveOffset = (widget.pendingTimeFrameOffset != null && pageIndex == 1)
-                    ? widget.pendingTimeFrameOffset! + pageOffset
-                    : widget.timeFrameOffset + pageOffset;
-                
-                if (widget.isLoadingData) {
-                  return LoadingChart(height: _getChartHeight());
-                }
-                
-                final pageData = widget.getChartDataForOffset(widget.data, effectiveOffset);
-                final pageMaxValue = pageData.isEmpty 
-                    ? 5000.0 
-                    : (pageData.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity);
-                
+                final effectiveOffset = widget.timeFrameOffset + pageOffset;
+
+                final pageData =
+                    widget.getChartDataForOffset(widget.data, effectiveOffset);
+                final pageMaxValue = pageData.isEmpty
+                    ? 5000.0
+                    : (pageData
+                                .map((e) => e.value)
+                                .reduce((a, b) => a > b ? a : b) *
+                            1.2)
+                        .clamp(100.0, double.infinity);
+
                 final pageBaseDate = widget.getBaseDate(effectiveOffset);
-                
+
                 return RepaintBoundary(
                   child: _buildChart(pageData, pageMaxValue, pageBaseDate),
                 );
@@ -287,4 +291,3 @@ class _ChartContainerState extends State<ChartContainer> {
     );
   }
 }
-
