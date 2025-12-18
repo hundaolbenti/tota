@@ -23,7 +23,7 @@ import 'package:totals/screens/settings_page.dart';
 import 'package:totals/services/notification_service.dart';
 import 'package:totals/data/consts.dart';
 import 'package:totals/utils/text_utils.dart';
-import 'package:totals/widgets/recent_transactions_card.dart';
+import 'package:totals/widgets/today_transactions_list.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -351,15 +351,71 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         ? ListView(
                             children: [
                               const SizedBox(height: 12),
-                              Builder(builder: (context) {
-                                final today = _todayTransactions(provider);
-                                return RecentTransactionsCard(
-                                  title: "Today's transactions",
-                                  transactions: today,
-                                  totalCount: today.length,
-                                  provider: provider,
-                                );
-                              }),
+                              Builder(
+                                builder: (context) {
+                                  final today = _todayTransactions(provider);
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Today's transactions",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            '${today.length}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                              Builder(
+                                builder: (context) {
+                                  final today = _todayTransactions(provider);
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: TodayTransactionsList(
+                                      transactions: today,
+                                      provider: provider,
+                                    ),
+                                  );
+                                },
+                              ),
                               const SizedBox(height: 100),
                             ],
                           )
