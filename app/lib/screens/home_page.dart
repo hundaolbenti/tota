@@ -19,6 +19,9 @@ import 'package:totals/widgets/detected_banks_widget.dart';
 import 'package:totals/screens/analytics_page.dart';
 import 'package:totals/screens/web_page.dart';
 import 'package:totals/screens/settings_page.dart';
+import 'package:totals/services/notification_service.dart';
+import 'package:totals/data/consts.dart';
+import 'package:totals/utils/text_utils.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -50,16 +53,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // Initialize services
     _smsService.init();
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.requestPermissionsIfNeeded();
+    });
+
     // Set up callback with mounted check
-    _smsService.onMessageReceived = () {
-      // Reload data on new SMS - check if widget is still mounted
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            Provider.of<TransactionProvider>(context, listen: false).loadData();
-          }
-        });
-      }
+    _smsService.onTransactionSaved = (tx) {
+      if (!mounted) return;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        Provider.of<TransactionProvider>(context, listen: false).loadData();
+
+        final bankLabel = AppConstants.banks
+            .firstWhere(
+              (b) => b.id == tx.bankId,
+              orElse: () => const Bank(
+                id: -1,
+                name: 'Totals',
+                shortName: 'Totals',
+                codes: [],
+                image: '',
+              ),
+            )
+            .shortName;
+
+        final sign = tx.type == 'CREDIT'
+            ? '+'
+            : tx.type == 'DEBIT'
+                ? '-'
+                : '';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$bankLabel: $sign ETB ${formatNumberWithComma(tx.amount)}',
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      });
     };
 
     // Initial Load
