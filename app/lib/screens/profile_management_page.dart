@@ -135,90 +135,142 @@ class _ProfileManagementPageState extends State<ProfileManagementPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Create Profile Button
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _createProfile,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
+          : CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(20),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      // Header
+                      Text(
+                        'Manage your profiles',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.add_circle_outline,
-                            size: 22,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Create Profile',
-                            style: TextStyle(
-                              fontSize: 17,
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Profiles List
-                if (_profiles.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        'No profiles yet',
-                        style: TextStyle(
+                      const SizedBox(height: 8),
+                      Text(
+                        'Switch between different profiles to organize your finances',
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),
-                    ),
-                  )
-                else
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      children: [
-                        for (int i = 0; i < _profiles.length; i++) ...[
-                          _buildProfileItem(
-                            context: context,
-                            profile: _profiles[i],
-                            isActive: _profiles[i].id == _activeProfileId,
-                            isFirst: i == 0,
-                            isLast: i == _profiles.length - 1,
-                          ),
-                          if (i < _profiles.length - 1)
-                            Divider(
-                              height: 0.5,
-                              thickness: 0.5,
-                              indent: 50,
-                              endIndent: 16,
-                              color: isDark
-                                  ? Colors.white.withOpacity(0.1)
-                                  : Colors.black.withOpacity(0.1),
+                      const SizedBox(height: 32),
+
+                      // Create Profile Button
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _createProfile,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: theme.colorScheme.primary.withOpacity(0.2),
+                                width: 1.5,
+                              ),
                             ),
-                        ],
-                      ],
-                    ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.add,
+                                    color: theme.colorScheme.onPrimary,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Create New Profile',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Add a new profile to organize your finances',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Profiles List
+                      if (_profiles.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(48),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.person_outline,
+                                size: 64,
+                                color: theme.colorScheme.onSurface.withOpacity(0.3),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No profiles yet',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Create your first profile to get started',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        ..._profiles.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final profile = entry.value;
+                          final isActive = profile.id == _activeProfileId;
+                          
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: index < _profiles.length - 1 ? 12 : 0),
+                            child: _buildProfileItem(
+                              context: context,
+                              profile: profile,
+                              isActive: isActive,
+                            ),
+                          );
+                        }).toList(),
+
+                      const SizedBox(height: 100), // Padding for navbar
+                    ]),
                   ),
+                ),
               ],
             ),
     );
@@ -228,8 +280,6 @@ class _ProfileManagementPageState extends State<ProfileManagementPage> {
     required BuildContext context,
     required Profile profile,
     required bool isActive,
-    required bool isFirst,
-    required bool isLast,
   }) {
     final theme = Theme.of(context);
     final initials = _getInitials(profile.name);
@@ -238,87 +288,164 @@ class _ProfileManagementPageState extends State<ProfileManagementPage> {
       color: Colors.transparent,
       child: InkWell(
         onTap: profile.id != null ? () => _setActiveProfile(profile.id!) : null,
-        borderRadius: BorderRadius.vertical(
-          top: isFirst ? const Radius.circular(10) : Radius.zero,
-          bottom: isLast ? const Radius.circular(10) : Radius.zero,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isActive
+                ? theme.colorScheme.primary.withOpacity(0.1)
+                : theme.colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isActive
+                  ? theme.colorScheme.primary.withOpacity(0.3)
+                  : theme.colorScheme.outline.withOpacity(0.1),
+              width: isActive ? 2 : 1,
+            ),
+          ),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
+                  color: isActive
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.primary.withOpacity(0.7),
                   shape: BoxShape.circle,
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: theme.colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Center(
                   child: Text(
                     initials,
                     style: TextStyle(
                       color: theme.colorScheme.onPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            profile.name,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (isActive)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 14,
+                                  color: theme.colorScheme.onPrimary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Active',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
                     Text(
-                      profile.name,
-                      style: TextStyle(
-                        fontSize: 17,
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w400,
+                      'Tap to activate this profile',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
-                    if (isActive)
-                      Text(
-                        'Active',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
                   ],
                 ),
               ),
-              if (isActive)
-                Icon(
-                  Icons.check_circle,
-                  size: 24,
-                  color: theme.colorScheme.primary,
-                )
-              else
-                Icon(
-                  Icons.radio_button_unchecked,
-                  size: 24,
-                  color: theme.colorScheme.onSurface.withOpacity(0.3),
-                ),
               const SizedBox(width: 8),
-              IconButton(
+              // Action buttons
+              PopupMenuButton<String>(
                 icon: Icon(
-                  Icons.edit_outlined,
-                  size: 20,
+                  Icons.more_vert,
                   color: theme.colorScheme.onSurface.withOpacity(0.5),
                 ),
-                onPressed: () => _renameProfile(profile),
-              ),
-              if (_profiles.length > 1)
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    size: 20,
-                    color: Colors.red.withOpacity(0.7),
-                  ),
-                  onPressed: () => _deleteProfile(profile),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 20,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text('Rename'),
+                      ],
+                    ),
+                  ),
+                  if (_profiles.length > 1)
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline,
+                            size: 20,
+                            color: theme.colorScheme.error,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Delete',
+                            style: TextStyle(
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _renameProfile(profile);
+                  } else if (value == 'delete') {
+                    _deleteProfile(profile);
+                  }
+                },
+              ),
             ],
           ),
         ),
@@ -353,39 +480,116 @@ class _CreateProfileDialogState extends State<_CreateProfileDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Create Profile'),
-      content: Form(
-        key: _formKey,
-        child: TextFormField(
-          controller: _controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Profile Name',
-            hintText: 'Enter profile name',
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter a profile name';
-            }
-            return null;
-          },
+    final theme = Theme.of(context);
+    
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: theme.colorScheme.surface,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.person_add,
+                    color: theme.colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Create Profile',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Form(
+              key: _formKey,
+              child: TextFormField(
+                controller: _controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Profile Name',
+                  hintText: 'e.g., Personal, Business',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a profile name';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        Navigator.pop(context, _controller.text.trim());
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Create'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              Navigator.pop(context, _controller.text.trim());
-            }
-          },
-          child: const Text('Create'),
-        ),
-      ],
     );
   }
 }
@@ -417,39 +621,116 @@ class _RenameProfileDialogState extends State<_RenameProfileDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Rename Profile'),
-      content: Form(
-        key: _formKey,
-        child: TextFormField(
-          controller: _controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Profile Name',
-            hintText: 'Enter profile name',
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter a profile name';
-            }
-            return null;
-          },
+    final theme = Theme.of(context);
+    
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: theme.colorScheme.surface,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.edit,
+                    color: theme.colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Rename Profile',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Form(
+              key: _formKey,
+              child: TextFormField(
+                controller: _controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Profile Name',
+                  hintText: 'Enter new profile name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter a profile name';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        Navigator.pop(context, _controller.text.trim());
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              Navigator.pop(context, _controller.text.trim());
-            }
-          },
-          child: const Text('Save'),
-        ),
-      ],
     );
   }
 }

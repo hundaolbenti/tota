@@ -276,62 +276,109 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   void _showAboutDialog() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
         ),
-        title: const Text('About'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  'T',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onPrimary,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: theme.colorScheme.surface,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Logo
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    isDark
+                        ? 'assets/images/logo-text-white.png'
+                        : 'assets/images/logo-text.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback if image not found
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'T',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Totals',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+              const SizedBox(height: 20),
+              Text(
+                'Totals',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Version 1.1.0',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
                   ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Version 1.1.0',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'A personal finance tracking app that helps you manage your bank accounts and transactions.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'A personal finance tracking app that helps you manage your bank accounts and transactions.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -339,68 +386,7 @@ class _SettingsPageState extends State<SettingsPage>
   void _showHelpDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text('Help & FAQ'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildFAQItem(
-                context: context,
-                question: 'How do I add an account?',
-                answer: 'Tap on the account card at the top of settings to manage accounts.',
-              ),
-              const SizedBox(height: 16),
-              _buildFAQItem(
-                context: context,
-                question: 'How do I export my data?',
-                answer: 'Go to Settings > Export Data to save your data as a JSON file.',
-              ),
-              const SizedBox(height: 16),
-              _buildFAQItem(
-                context: context,
-                question: 'How do I categorize transactions?',
-                answer: 'Tap on any transaction and select a category from the list.',
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFAQItem({
-    required BuildContext context,
-    required String question,
-    required String answer,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          question,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          answer,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-        ),
-      ],
+      builder: (context) => _FAQDialog(),
     );
   }
 
@@ -454,7 +440,7 @@ class _SettingsPageState extends State<SettingsPage>
                         _buildSectionHeader(title: 'Preferences'),
                         const SizedBox(height: 12),
                         _buildSettingsCard(
-              children: [
+        children: [
                 Consumer<ThemeProvider>(
                   builder: (context, themeProvider, child) {
                                 return _buildSettingTile(
@@ -530,38 +516,38 @@ class _SettingsPageState extends State<SettingsPage>
                   ),
                           ],
                         ),
-                    const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                    // Section: Support
-                    _buildSectionHeader(title: 'Support'),
-                    const SizedBox(height: 12),
-                    _buildSettingsCard(
-                      children: [
-                        _buildSettingTile(
-                          icon: Icons.info_outline_rounded,
-                          title: 'About',
-                          onTap: _showAboutDialog,
-                        ),
-                        _buildDivider(context),
-                        _buildSettingTile(
-                          icon: Icons.help_outline_rounded,
-                          title: 'Help & FAQ',
-                          onTap: _showHelpDialog,
-                        ),
-                        _buildDivider(context),
-                        _buildSettingTile(
-                          icon: Icons.delete_outline_rounded,
-                          title: 'Clear Data',
-                          titleColor: theme.colorScheme.error,
-                          onTap: () => showClearDatabaseDialog(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
+                        // Section: Support
+                        _buildSectionHeader(title: 'Support'),
+                        const SizedBox(height: 12),
+                        _buildSettingsCard(
+                          children: [
+                            _buildSettingTile(
+                              icon: Icons.info_outline_rounded,
+                              title: 'About',
+                              onTap: _showAboutDialog,
+                            ),
+                            _buildDivider(context),
+                            _buildSettingTile(
+                              icon: Icons.help_outline_rounded,
+                              title: 'Help & FAQ',
+                              onTap: _showHelpDialog,
+                            ),
+                            _buildDivider(context),
+                            _buildSettingTile(
+                              icon: Icons.delete_outline_rounded,
+                              title: 'Clear Data',
+                              titleColor: theme.colorScheme.error,
+                              onTap: () => showClearDatabaseDialog(context),
+                ),
+              ],
+            ),
+                        const SizedBox(height: 32),
 
                         // Support Developers Button
                         _buildSupportDevelopersButton(),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 100), // Padding for floating nav
                       ]),
                     );
                   },
@@ -766,8 +752,8 @@ class _SettingsPageState extends State<SettingsPage>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedBuilder(
-                animation: _shimmerController,
-                builder: (context, child) {
+          animation: _shimmerController,
+          builder: (context, child) {
                   return Icon(
                     Icons.favorite_rounded,
                     color: theme.colorScheme.primary,
@@ -783,6 +769,190 @@ class _SettingsPageState extends State<SettingsPage>
                   fontWeight: FontWeight.w500,
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FAQDialog extends StatefulWidget {
+  @override
+  State<_FAQDialog> createState() => _FAQDialogState();
+}
+
+class _FAQDialogState extends State<_FAQDialog> {
+  final Map<int, bool> _expandedItems = {};
+
+  final List<Map<String, String>> _faqs = [
+    {
+      'question': 'How do I add an account?',
+      'answer': 'Tap on the profile card at the top of settings to manage profiles and accounts.',
+    },
+    {
+      'question': 'How do I export my data?',
+      'answer': 'Go to Settings > Export Data. You can choose to save the file directly or share it with other apps.',
+    },
+    {
+      'question': 'How do I categorize transactions?',
+      'answer': 'Tap on any transaction in your transaction list and select a category from the list that appears.',
+    },
+    {
+      'question': 'How do I switch between profiles?',
+      'answer': 'Go to Settings > tap on your profile card > select the profile you want to use. The active profile will be marked with a checkmark.',
+    },
+    {
+      'question': 'Can I import data from another device?',
+      'answer': 'Yes! Use the Export Data feature to create a backup file, then use Import Data on your other device to restore it.',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 600),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: theme.colorScheme.surface,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Help & FAQ',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _faqs.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final isExpanded = _expandedItems[index] ?? false;
+                  return _buildFAQItem(
+                    context: context,
+                    question: _faqs[index]['question']!,
+                    answer: _faqs[index]['answer']!,
+                    isExpanded: isExpanded,
+                    onTap: () {
+                      setState(() {
+                        _expandedItems[index] = !isExpanded;
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildFAQItem({
+    required BuildContext context,
+    required String question,
+    required String answer,
+    required bool isExpanded,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.colorScheme.outline.withOpacity(0.1),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      question,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              if (isExpanded) ...[
+                const SizedBox(height: 12),
+                AnimatedOpacity(
+                  opacity: isExpanded ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    child: Text(
+                      answer,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
