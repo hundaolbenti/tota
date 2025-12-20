@@ -27,6 +27,7 @@ import 'package:totals/widgets/today_transactions_list.dart';
 import 'package:totals/widgets/categorize_transaction_sheet.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -42,6 +43,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final PageController _mainPageController = PageController();
 
   bool _isAuthenticated = false;
+  bool _isAuthenticating = false;
   bool _hasCheckedInternet = false;
   bool _hasCheckedNotificationPermissions = false;
 
@@ -121,6 +123,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (mounted) {
         Provider.of<TransactionProvider>(context, listen: false).loadData();
       }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _authenticateIfAvailable();
     });
   }
 
@@ -216,33 +222,92 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> authenticateUser() async {
-    if (!_isAuthenticated) {
-      final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
-      if (canAuthenticateWithBiometrics) {
-        try {
-          final bool didAuthenticate = await _auth.authenticate(
-              localizedReason: 'Please authenticate to show account details',
-              options: const AuthenticationOptions(biometricOnly: false));
-          setState(() {
-            _isAuthenticated = didAuthenticate;
-          });
-
-          // Check internet requirement after successful authentication
-          if (didAuthenticate && !_hasCheckedInternet) {
-            _hasCheckedInternet = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _checkInternetRequirement();
-            });
-          }
-        } catch (e) {
-          print(e);
-        }
-      }
-    } else {
+    if (_isAuthenticated) {
       setState(() {
         _isAuthenticated = false;
         _hasCheckedInternet = false; // Reset when logging out
       });
+      return;
+    }
+
+    await _authenticateIfAvailable();
+  }
+
+  void _setAuthenticated(bool value) {
+    if (!mounted) return;
+    setState(() {
+      _isAuthenticated = value;
+    });
+
+    if (value && !_hasCheckedInternet) {
+      _hasCheckedInternet = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkInternetRequirement();
+      });
+    }
+  }
+
+  bool _shouldBypassSecurity(PlatformException error) {
+    final code = error.code.toLowerCase();
+    return code.contains('notavailable') ||
+        code.contains('notenrolled') ||
+        code.contains('passcodenotset') ||
+        code.contains('passcode_not_set') ||
+        code.contains('not_enrolled') ||
+        code.contains('not_available');
+  }
+
+  Future<void> _authenticateIfAvailable() async {
+    if (_isAuthenticated || _isAuthenticating) return;
+
+    if (kIsWeb) {
+      _setAuthenticated(true);
+      return;
+    }
+
+    setState(() {
+      _isAuthenticating = true;
+    });
+
+    try {
+      final canCheckBiometrics = await _auth.canCheckBiometrics;
+      final isDeviceSupported = await _auth.isDeviceSupported();
+
+      if (!canCheckBiometrics && !isDeviceSupported) {
+        _setAuthenticated(true);
+        return;
+      }
+
+      final didAuthenticate = await _auth.authenticate(
+        localizedReason: 'Please authenticate to show account details',
+        options: const AuthenticationOptions(
+          biometricOnly: false,
+          stickyAuth: true,
+        ),
+      );
+
+      if (!mounted) return;
+      if (didAuthenticate) {
+        _setAuthenticated(true);
+      }
+    } on PlatformException catch (e) {
+      if (_shouldBypassSecurity(e)) {
+        _setAuthenticated(true);
+      } else {
+        if (kDebugMode) {
+          print('debug: Authentication error: $e');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('debug: Authentication error: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAuthenticating = false;
+        });
+      }
     }
   }
 
@@ -424,6 +489,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                     visibleTotalBalancesForSubCards:
                                         visibleTotalBalancesForSubCards,
                                     onBankTap: changeTab,
+                                    onAccountAdded: () {
+                                      provider.loadData();
+                                    },
                                     onAddAccount: () {
                                       showModalBottomSheet(
                                         isScrollControlled: true,

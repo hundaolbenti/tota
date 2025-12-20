@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:totals/models/transaction.dart';
 import 'chart_data_point.dart';
 import 'charts/line_chart_widget.dart';
 import 'charts/bar_chart_widget.dart';
@@ -14,11 +15,11 @@ class ChartContainer extends StatefulWidget {
   final PageController timeFramePageController;
   final ValueChanged<int> onTimeFramePageChanged;
   final DateTime Function(int?) getBaseDate;
-  final List<ChartDataPoint> Function(List<ChartDataPoint>, int)
-      getChartDataForOffset;
+  final List<ChartDataPoint> Function(int) getChartDataForOffset;
   final String? selectedCard;
-  final int? selectedBankFilter;
-  final String? selectedAccountFilter;
+  final List<Transaction> barChartTransactions;
+  final List<Transaction> pnlTransactions;
+  final DateTime? Function(Transaction) dateForTransaction;
   final VoidCallback onResetTimeFrame;
   final ValueChanged<bool> onNavigateTimeFrame;
 
@@ -34,8 +35,9 @@ class ChartContainer extends StatefulWidget {
     required this.getBaseDate,
     required this.getChartDataForOffset,
     required this.selectedCard,
-    required this.selectedBankFilter,
-    required this.selectedAccountFilter,
+    required this.barChartTransactions,
+    required this.pnlTransactions,
+    required this.dateForTransaction,
     required this.onResetTimeFrame,
     required this.onNavigateTimeFrame,
   });
@@ -85,8 +87,9 @@ class _ChartContainerState extends State<ChartContainer> {
           maxValue: maxValue,
           baseDate: baseDate,
           selectedPeriod: widget.selectedPeriod,
-          selectedBankFilter: widget.selectedBankFilter,
           timeFrameOffset: widget.timeFrameOffset,
+          transactions: widget.barChartTransactions,
+          dateForTransaction: widget.dateForTransaction,
         );
         break;
       case 'Pie Chart':
@@ -99,8 +102,8 @@ class _ChartContainerState extends State<ChartContainer> {
           baseDate: baseDate,
           selectedPeriod: widget.selectedPeriod,
           selectedCard: widget.selectedCard,
-          selectedBankFilter: widget.selectedBankFilter,
-          selectedAccountFilter: widget.selectedAccountFilter,
+          transactions: widget.pnlTransactions,
+          dateForTransaction: widget.dateForTransaction,
         );
         break;
       case 'Line Chart':
@@ -268,8 +271,7 @@ class _ChartContainerState extends State<ChartContainer> {
                 final pageOffset = pageIndex - 1;
                 final effectiveOffset = widget.timeFrameOffset + pageOffset;
 
-                final pageData =
-                    widget.getChartDataForOffset(widget.data, effectiveOffset);
+                final pageData = widget.getChartDataForOffset(effectiveOffset);
                 final pageMaxValue = pageData.isEmpty
                     ? 5000.0
                     : (pageData
