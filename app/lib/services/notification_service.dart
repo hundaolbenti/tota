@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:totals/data/consts.dart';
 import 'package:totals/models/transaction.dart';
 import 'package:totals/services/notification_intent_bus.dart';
@@ -101,6 +102,20 @@ class NotificationService {
       if (kDebugMode) {
         print('debug: Failed reading launch notification details: $e');
       }
+    }
+  }
+
+  Future<bool> arePermissionsGranted() async {
+    if (kIsWeb) return true;
+
+    try {
+      final status = await Permission.notification.status;
+      return status.isGranted;
+    } catch (e) {
+      if (kDebugMode) {
+        print('debug: Failed to check notification permission status: $e');
+      }
+      return false;
     }
   }
 

@@ -27,6 +27,8 @@ import 'package:totals/data/consts.dart';
 import 'package:totals/utils/text_utils.dart';
 import 'package:totals/widgets/today_transactions_list.dart';
 import 'package:totals/widgets/categorize_transaction_sheet.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -43,6 +45,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   bool _isAuthenticated = false;
   bool _hasCheckedInternet = false;
+  bool _hasCheckedNotificationPermissions = false;
 
   // UI State
   bool showTotalBalance = false;
@@ -56,11 +59,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Initialize services
-    _smsService.init();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService.instance.requestPermissionsIfNeeded();
+    // Initialize services and check permissions
+    _initPermissions().catchError((error) {
+      if (kDebugMode) {
+        print('debug: _initPermissions failed: $error');
+      }
     });
 
     _notificationIntentSub = NotificationIntentBus.instance.stream.listen(
@@ -250,6 +253,54 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final needsInternet = await configService.initializePatterns();
     if (needsInternet && mounted) {
       _showInternetDialog();
+    }
+  }
+
+  Future<void> _initPermissions() async {
+    try {
+      // Check SMS permission status first
+      final smsPermissionStatus = await Permission.sms.status;
+      final smsAlreadyGranted = smsPermissionStatus.isGranted;
+      
+      // Initialize SMS service (this may show a permission dialog)
+      await _smsService.init();
+      
+      // If SMS permission was already granted, we can check notification permissions immediately
+      // Otherwise, wait briefly to allow the SMS permission dialog to be shown and dismissed
+      final delay = smsAlreadyGranted 
+          ? const Duration(milliseconds: 1)  // Minimal delay if no SMS dialog will show
+          : const Duration(milliseconds: 1);  // Brief delay if SMS dialog was shown
+      
+      await Future.delayed(delay);
+      
+      if (mounted && !_hasCheckedNotificationPermissions) {
+        await _checkNotificationPermissions();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('debug: Error in _initPermissions: $e');
+      }
+      // Even if there's an error, try to check notification permissions
+      if (mounted && !_hasCheckedNotificationPermissions) {
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          await _checkNotificationPermissions();
+        }
+      }
+    }
+  }
+
+  Future<void> _checkNotificationPermissions() async {
+    if (kIsWeb) return;
+    if (_hasCheckedNotificationPermissions) return;
+    
+    // Set flag immediately to prevent duplicate checks
+    _hasCheckedNotificationPermissions = true;
+    
+    final permissionsGranted = await NotificationService.instance.arePermissionsGranted();
+    if (!permissionsGranted && mounted) {
+      // Automatically trigger the system permission dialog
+      await NotificationService.instance.requestPermissionsIfNeeded();
     }
   }
 
