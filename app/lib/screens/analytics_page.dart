@@ -10,6 +10,8 @@ import 'package:totals/widgets/analytics/chart_container.dart';
 import 'package:totals/widgets/analytics/transactions_list.dart';
 import 'package:totals/widgets/analytics/chart_data_point.dart';
 import 'package:totals/widgets/analytics/chart_data_utils.dart';
+import 'package:totals/services/bank_config_service.dart';
+import 'package:totals/models/summary_models.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -106,8 +108,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
   }
 
-  List<Transaction> _filterTransactions(
-      List<Transaction> allTransactions, List accounts, DateTime now) {
+  Future<List<Transaction>> _filterTransactions(
+      List<Transaction> allTransactions,
+      List<AccountSummary> accounts,
+      DateTime now) async {
+    final BankConfigService _bankConfigService = BankConfigService();
+    final banks = await _bankConfigService.getBanks();
+
     return allTransactions.where((t) {
       // Filter out transactions that don't have a matching account
       // This ensures deleted accounts' transactions don't appear
@@ -126,33 +133,29 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         if (t.accountNumber != null && t.accountNumber!.isNotEmpty) {
           for (var account in bankAccounts) {
             bool matches = false;
+            try {
+              final bank = banks.firstWhere((b) => b.id == account.bankId);
 
-            if (account.bankId == 1 && account.accountNumber.length >= 4) {
-              // CBE: match last 4 digits
-              matches = t.accountNumber!.length >= 4 &&
-                  t.accountNumber!.substring(t.accountNumber!.length - 4) ==
-                      account.accountNumber
-                          .substring(account.accountNumber.length - 4);
-            } else if (account.bankId == 4 &&
-                account.accountNumber.length >= 3) {
-              // Dashen: match last 3 digits
-              matches = t.accountNumber!.length >= 3 &&
-                  t.accountNumber!.substring(t.accountNumber!.length - 3) ==
-                      account.accountNumber
-                          .substring(account.accountNumber.length - 3);
-            } else if (account.bankId == 3 &&
-                account.accountNumber.length >= 2) {
-              // Bank of Abyssinia: match last 2 digits
-              matches = t.accountNumber!.length >= 2 &&
-                  t.accountNumber!.substring(t.accountNumber!.length - 2) ==
-                      account.accountNumber
-                          .substring(account.accountNumber.length - 2);
-            } else if (account.bankId == 2 || account.bankId == 6) {
-              // Awash/Telebirr: match by bankId only
-              matches = true;
-            } else {
-              // Other banks: exact match
-              matches = t.accountNumber == account.accountNumber;
+              if (bank.uniformMasking == true &&
+                  bank.maskPattern != null &&
+                  t.accountNumber != null &&
+                  account.accountNumber.length >= bank.maskPattern! &&
+                  t.accountNumber!.length >= bank.maskPattern!) {
+                // CBE: match last N digits based on mask pattern
+                matches = t.accountNumber!.substring(
+                        t.accountNumber!.length - bank.maskPattern!) ==
+                    account.accountNumber.substring(
+                        account.accountNumber.length - bank.maskPattern!);
+              } else if (bank.uniformMasking == false) {
+                // Awash/Telebirr: match by bankId only
+                matches = true;
+              } else {
+                // Other banks: exact match
+                matches = t.accountNumber == account.accountNumber;
+              }
+            } catch (e) {
+              // Bank not found, skip this account
+              continue;
             }
 
             if (matches) {
@@ -166,13 +169,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             return false;
           }
         } else {
-          // Transaction has no accountNumber - include only if it's the only account for the bank
-          // (handles legacy data)
-          if (bankAccounts.length == 1 && (t.bankId == 2 || t.bankId == 6)) {
-            hasMatchingAccount = true;
-          } else if (bankAccounts.length == 1) {
-            // For other banks, include NULL accountNumber transactions only if single account
-            hasMatchingAccount = true;
+          try {
+            final bank = banks.firstWhere((b) => b.id == t.bankId);
+            // Transaction has no accountNumber - include only if it's the only account for the bank
+            // (handles legacy data)
+            if (bankAccounts.length == 1 && (bank.uniformMasking == false)) {
+              hasMatchingAccount = true;
+            } else if (bankAccounts.length == 1) {
+              // For other banks, include NULL accountNumber transactions only if single account
+              hasMatchingAccount = true;
+            }
+          } catch (e) {
+            // Bank not found, exclude transaction
+            return false;
           }
         }
       } else {
@@ -196,31 +205,33 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           (a) =>
               a.accountNumber == _selectedAccountFilter &&
               a.bankId == _selectedBankFilter,
-          orElse: () => accounts.firstWhere(
-              (a) => a.bankId == _selectedBankFilter,
-              orElse: () => accounts.first),
+          orElse: () => accounts
+              .firstWhere((a) => a.bankId == _selectedBankFilter, orElse: () {
+            if (accounts.isEmpty) {
+              throw StateError('No accounts available');
+            }
+            return accounts.first;
+          }),
         );
 
-        if (account.bankId == 1 &&
-            t.accountNumber != null &&
-            account.accountNumber.length >= 4) {
-          matchesAccount = t.accountNumber!
-                  .substring(t.accountNumber!.length - 4) ==
-              account.accountNumber.substring(account.accountNumber.length - 4);
-        } else if (account.bankId == 4 &&
-            t.accountNumber != null &&
-            account.accountNumber.length >= 3) {
-          matchesAccount = t.accountNumber!
-                  .substring(t.accountNumber!.length - 3) ==
-              account.accountNumber.substring(account.accountNumber.length - 3);
-        } else if (account.bankId == 3 &&
-            t.accountNumber != null &&
-            account.accountNumber.length >= 2) {
-          matchesAccount = t.accountNumber!
-                  .substring(t.accountNumber!.length - 2) ==
-              account.accountNumber.substring(account.accountNumber.length - 2);
-        } else {
-          matchesAccount = t.bankId == account.bank;
+        try {
+          final bank = banks.firstWhere((b) => b.id == account.bankId);
+
+          if (bank.uniformMasking == true &&
+              bank.maskPattern != null &&
+              t.accountNumber != null &&
+              account.accountNumber.length >= bank.maskPattern! &&
+              t.accountNumber!.length >= bank.maskPattern!) {
+            matchesAccount = t.accountNumber!
+                    .substring(t.accountNumber!.length - bank.maskPattern!) ==
+                account.accountNumber.substring(
+                    account.accountNumber.length - bank.maskPattern!);
+          } else {
+            matchesAccount = t.bankId == account.bankId;
+          }
+        } catch (e) {
+          // Bank not found, exclude transaction
+          matchesAccount = false;
         }
       }
 
@@ -274,8 +285,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         filteredTransactions, period, effectiveBaseDate);
   }
 
-  List<ChartDataPoint> _getChartDataForOffset(
-      List<ChartDataPoint> baseData, int offset) {
+  Future<List<ChartDataPoint>> _getChartDataForOffset(
+      List<ChartDataPoint> baseData, int offset) async {
+    final BankConfigService _bankConfigService = BankConfigService();
+    final banks = await _bankConfigService.getBanks();
     final baseDate = _getBaseDate(offset);
     final allTransactions =
         Provider.of<TransactionProvider>(context, listen: false)
@@ -294,26 +307,25 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       if (t.accountNumber != null && t.accountNumber!.isNotEmpty) {
         for (var account in bankAccounts) {
           bool matches = false;
+          try {
+            final bank = banks.firstWhere((b) => b.id == account.bankId);
 
-          if (account.bankId == 1 && account.accountNumber.length >= 4) {
-            matches = t.accountNumber!.length >= 4 &&
-                t.accountNumber!.substring(t.accountNumber!.length - 4) ==
-                    account.accountNumber
-                        .substring(account.accountNumber.length - 4);
-          } else if (account.bankId == 4 && account.accountNumber.length >= 3) {
-            matches = t.accountNumber!.length >= 3 &&
-                t.accountNumber!.substring(t.accountNumber!.length - 3) ==
-                    account.accountNumber
-                        .substring(account.accountNumber.length - 3);
-          } else if (account.bankId == 3 && account.accountNumber.length >= 2) {
-            matches = t.accountNumber!.length >= 2 &&
-                t.accountNumber!.substring(t.accountNumber!.length - 2) ==
-                    account.accountNumber
-                        .substring(account.accountNumber.length - 2);
-          } else if (account.bankId == 2 || account.bankId == 6) {
-            matches = true; // Match by bankId only
-          } else {
-            matches = t.accountNumber == account.accountNumber;
+            if (bank.uniformMasking == true &&
+                bank.maskPattern != null &&
+                account.accountNumber.length >= bank.maskPattern! &&
+                t.accountNumber!.length >= bank.maskPattern!) {
+              matches = t.accountNumber!
+                      .substring(t.accountNumber!.length - bank.maskPattern!) ==
+                  account.accountNumber.substring(
+                      account.accountNumber.length - bank.maskPattern!);
+            } else if (bank.uniformMasking == false) {
+              matches = true; // Match by bankId only
+            } else {
+              matches = t.accountNumber == account.accountNumber;
+            }
+          } catch (e) {
+            // Bank not found, skip this account
+            continue;
           }
 
           if (matches) return true;
@@ -342,31 +354,32 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           (a) =>
               a.accountNumber == _selectedAccountFilter &&
               a.bankId == _selectedBankFilter,
-          orElse: () => accounts.firstWhere(
-              (a) => a.bankId == _selectedBankFilter,
-              orElse: () => accounts.first),
+          orElse: () => accounts
+              .firstWhere((a) => a.bankId == _selectedBankFilter, orElse: () {
+            if (accounts.isEmpty) {
+              throw StateError('No accounts available');
+            }
+            return accounts.first;
+          }),
         );
+        try {
+          final bank = banks.firstWhere((b) => b.id == account.bankId);
 
-        if (account.bankId == 1 &&
-            t.accountNumber != null &&
-            account.accountNumber.length >= 4) {
-          matchesAccount = t.accountNumber!
-                  .substring(t.accountNumber!.length - 4) ==
-              account.accountNumber.substring(account.accountNumber.length - 4);
-        } else if (account.bankId == 4 &&
-            t.accountNumber != null &&
-            account.accountNumber.length >= 3) {
-          matchesAccount = t.accountNumber!
-                  .substring(t.accountNumber!.length - 3) ==
-              account.accountNumber.substring(account.accountNumber.length - 3);
-        } else if (account.bankId == 3 &&
-            t.accountNumber != null &&
-            account.accountNumber.length >= 2) {
-          matchesAccount = t.accountNumber!
-                  .substring(t.accountNumber!.length - 2) ==
-              account.accountNumber.substring(account.accountNumber.length - 2);
-        } else {
-          matchesAccount = t.bankId == account.bankId;
+          if (bank.uniformMasking == true &&
+              bank.maskPattern != null &&
+              t.accountNumber != null &&
+              account.accountNumber.length >= bank.maskPattern! &&
+              t.accountNumber!.length >= bank.maskPattern!) {
+            matchesAccount = t.accountNumber!
+                    .substring(t.accountNumber!.length - bank.maskPattern!) ==
+                account.accountNumber.substring(
+                    account.accountNumber.length - bank.maskPattern!);
+          } else {
+            matchesAccount = t.bankId == account.bankId;
+          }
+        } catch (e) {
+          // Bank not found, exclude transaction
+          matchesAccount = false;
         }
       }
 
@@ -416,130 +429,169 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         final accounts = provider.accountSummaries;
 
         final now = _getBaseDate();
-        final filteredTransactions =
+        final filteredTransactionsFuture =
             _filterTransactions(allTransactions, accounts, now);
 
-        final chartData = _getChartData(filteredTransactions, _selectedPeriod,
-            _selectedBankFilter, _selectedAccountFilter);
-        final maxValue = chartData.isEmpty
-            ? 5000.0
-            : (chartData.map((e) => e.value).reduce((a, b) => a > b ? a : b) *
-                    1.2)
-                .clamp(100.0, double.infinity);
-
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: SafeArea(
-            bottom: false,
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Text(
-                        'Statistics',
+        return FutureBuilder<List<Transaction>>(
+          future: filteredTransactionsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              print("debug: Error filtering transactions: ${snapshot.error}");
+              return Scaffold(
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 48, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading data: ${snapshot.error}',
                         style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: Theme.of(context).colorScheme.error,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    TimePeriodSelector(
-                      selectedPeriod: _selectedPeriod,
-                      onPeriodChanged: (period) {
-                        setState(() {
-                          _selectedPeriod = period;
-                          _timeFrameOffset = 0;
-                        });
-                      },
-                      onPeriodChange: () {
-                        if (_timeFramePageController.hasClients) {
-                          _timeFramePageController.jumpToPage(1);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    FilterSection(
-                      bankSummaries: bankSummaries,
-                      selectedBankFilter: _selectedBankFilter,
-                      selectedAccountFilter: _selectedAccountFilter,
-                      accounts: accounts,
-                      onBankFilterChanged: (bankId) {
-                        setState(() {
-                          _selectedBankFilter = bankId;
-                          _selectedAccountFilter = null;
-                        });
-                      },
-                      onAccountFilterChanged: (accountNumber) {
-                        setState(() {
-                          _selectedAccountFilter = accountNumber;
-                        });
-                      },
-                    ),
-                    if (_selectedBankFilter != null) const SizedBox(height: 16),
-                    const SizedBox(height: 24),
-                    IncomeExpenseCards(
-                      selectedCard: _selectedCard,
-                      selectedPeriod: _selectedPeriod,
-                      selectedBankFilter: _selectedBankFilter,
-                      selectedAccountFilter: _selectedAccountFilter,
-                      getBaseDate: _getBaseDate,
-                      onCardSelected: (card) {
-                        setState(() {
-                          _selectedCard = card;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (!snapshot.hasData) {
+              return Scaffold(
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                body: const Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final filteredTransactions = snapshot.data!;
+            final chartData = _getChartData(filteredTransactions,
+                _selectedPeriod, _selectedBankFilter, _selectedAccountFilter);
+            final maxValue = chartData.isEmpty
+                ? 5000.0
+                : (chartData
+                            .map((e) => e.value)
+                            .reduce((a, b) => a > b ? a : b) *
+                        1.2)
+                    .clamp(100.0, double.infinity);
+
+            return Scaffold(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              body: SafeArea(
+                bottom: false,
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ChartTypeSelector(
-                          chartType: _chartType,
-                          onChartTypeChanged: (type) {
+                        Center(
+                          child: Text(
+                            'Statistics',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        TimePeriodSelector(
+                          selectedPeriod: _selectedPeriod,
+                          onPeriodChanged: (period) {
                             setState(() {
-                              _chartType = type;
+                              _selectedPeriod = period;
+                              _timeFrameOffset = 0;
+                            });
+                          },
+                          onPeriodChange: () {
+                            if (_timeFramePageController.hasClients) {
+                              _timeFramePageController.jumpToPage(1);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        FilterSection(
+                          bankSummaries: bankSummaries,
+                          selectedBankFilter: _selectedBankFilter,
+                          selectedAccountFilter: _selectedAccountFilter,
+                          accounts: accounts,
+                          onBankFilterChanged: (bankId) {
+                            setState(() {
+                              _selectedBankFilter = bankId;
+                              _selectedAccountFilter = null;
+                            });
+                          },
+                          onAccountFilterChanged: (accountNumber) {
+                            setState(() {
+                              _selectedAccountFilter = accountNumber;
+                            });
+                          },
+                        ),
+                        if (_selectedBankFilter != null)
+                          const SizedBox(height: 16),
+                        const SizedBox(height: 24),
+                        IncomeExpenseCards(
+                          selectedCard: _selectedCard,
+                          selectedPeriod: _selectedPeriod,
+                          selectedBankFilter: _selectedBankFilter,
+                          selectedAccountFilter: _selectedAccountFilter,
+                          getBaseDate: _getBaseDate,
+                          onCardSelected: (card) {
+                            setState(() {
+                              _selectedCard = card;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            ChartTypeSelector(
+                              chartType: _chartType,
+                              onChartTypeChanged: (type) {
+                                setState(() {
+                                  _chartType = type;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ChartContainer(
+                          data: chartData,
+                          maxValue: maxValue,
+                          chartType: _chartType,
+                          selectedPeriod: _selectedPeriod,
+                          timeFrameOffset: _timeFrameOffset,
+                          timeFramePageController: _timeFramePageController,
+                          onTimeFramePageChanged: _onTimeFramePageChanged,
+                          getBaseDate: _getBaseDate,
+                          getChartDataForOffset: _getChartDataForOffset,
+                          selectedCard: _selectedCard,
+                          selectedBankFilter: _selectedBankFilter,
+                          selectedAccountFilter: _selectedAccountFilter,
+                          onResetTimeFrame: _resetTimeFrame,
+                          onNavigateTimeFrame: _navigateTimeFrame,
+                        ),
+                        const SizedBox(height: 24),
+                        TransactionsList(
+                          transactions: filteredTransactions,
+                          sortBy: _sortBy,
+                          onSortChanged: (sort) {
+                            setState(() {
+                              _sortBy = sort;
                             });
                           },
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    ChartContainer(
-                      data: chartData,
-                      maxValue: maxValue,
-                      chartType: _chartType,
-                      selectedPeriod: _selectedPeriod,
-                      timeFrameOffset: _timeFrameOffset,
-                      timeFramePageController: _timeFramePageController,
-                      onTimeFramePageChanged: _onTimeFramePageChanged,
-                      getBaseDate: _getBaseDate,
-                      getChartDataForOffset: _getChartDataForOffset,
-                      selectedCard: _selectedCard,
-                      selectedBankFilter: _selectedBankFilter,
-                      selectedAccountFilter: _selectedAccountFilter,
-                      onResetTimeFrame: _resetTimeFrame,
-                      onNavigateTimeFrame: _navigateTimeFrame,
-                    ),
-                    const SizedBox(height: 24),
-                    TransactionsList(
-                      transactions: filteredTransactions,
-                      sortBy: _sortBy,
-                      onSortChanged: (sort) {
-                        setState(() {
-                          _sortBy = sort;
-                        });
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

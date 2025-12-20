@@ -14,7 +14,7 @@ class ChartContainer extends StatefulWidget {
   final PageController timeFramePageController;
   final ValueChanged<int> onTimeFramePageChanged;
   final DateTime Function(int?) getBaseDate;
-  final List<ChartDataPoint> Function(List<ChartDataPoint>, int)
+  final Future<List<ChartDataPoint>> Function(List<ChartDataPoint>, int)
       getChartDataForOffset;
   final String? selectedCard;
   final int? selectedBankFilter;
@@ -268,20 +268,66 @@ class _ChartContainerState extends State<ChartContainer> {
                 final pageOffset = pageIndex - 1;
                 final effectiveOffset = widget.timeFrameOffset + pageOffset;
 
-                final pageData =
+                final pageDataFuture =
                     widget.getChartDataForOffset(widget.data, effectiveOffset);
-                final pageMaxValue = pageData.isEmpty
-                    ? 5000.0
-                    : (pageData
-                                .map((e) => e.value)
-                                .reduce((a, b) => a > b ? a : b) *
-                            1.2)
-                        .clamp(100.0, double.infinity);
-
                 final pageBaseDate = widget.getBaseDate(effectiveOffset);
 
-                return RepaintBoundary(
-                  child: _buildChart(pageData, pageMaxValue, pageBaseDate),
+                return FutureBuilder<List<ChartDataPoint>>(
+                  future: pageDataFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      print(
+                          "debug: Error loading chart data: ${snapshot.error}");
+                      return Container(
+                        height: _getChartHeight(),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceVariant
+                              .withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Error loading chart',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (!snapshot.hasData) {
+                      return Container(
+                        height: _getChartHeight(),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceVariant
+                              .withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    final pageData = snapshot.data!;
+                    final pageMaxValue = pageData.isEmpty
+                        ? 5000.0
+                        : (pageData
+                                    .map((e) => e.value)
+                                    .reduce((a, b) => a > b ? a : b) *
+                                1.2)
+                            .clamp(100.0, double.infinity);
+
+                    return RepaintBoundary(
+                      child: _buildChart(pageData, pageMaxValue, pageBaseDate),
+                    );
+                  },
                 );
               },
             ),
