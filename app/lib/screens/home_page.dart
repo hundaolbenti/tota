@@ -259,18 +259,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // Check SMS permission status first
       final smsPermissionStatus = await Permission.sms.status;
       final smsAlreadyGranted = smsPermissionStatus.isGranted;
-      
+
       // Initialize SMS service (this may show a permission dialog)
       await _smsService.init();
-      
+
       // If SMS permission was already granted, we can check notification permissions immediately
       // Otherwise, wait briefly to allow the SMS permission dialog to be shown and dismissed
-      final delay = smsAlreadyGranted 
-          ? const Duration(milliseconds: 1)  // Minimal delay if no SMS dialog will show
-          : const Duration(milliseconds: 1);  // Brief delay if SMS dialog was shown
-      
+      final delay = smsAlreadyGranted
+          ? const Duration(
+              milliseconds: 1) // Minimal delay if no SMS dialog will show
+          : const Duration(
+              milliseconds: 1); // Brief delay if SMS dialog was shown
+
       await Future.delayed(delay);
-      
+
       if (mounted && !_hasCheckedNotificationPermissions) {
         await _checkNotificationPermissions();
       }
@@ -291,11 +293,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void> _checkNotificationPermissions() async {
     if (kIsWeb) return;
     if (_hasCheckedNotificationPermissions) return;
-    
+
     // Set flag immediately to prevent duplicate checks
     _hasCheckedNotificationPermissions = true;
-    
-    final permissionsGranted = await NotificationService.instance.arePermissionsGranted();
+
+    final permissionsGranted =
+        await NotificationService.instance.arePermissionsGranted();
     if (!permissionsGranted && mounted) {
       // Automatically trigger the system permission dialog
       await NotificationService.instance.requestPermissionsIfNeeded();
@@ -528,12 +531,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               const SizedBox(height: 100),
                             ],
                           )
-                    : BankDetail(
-                        bankId: tabId,
-                        accountSummaries: provider.accountSummaries
-                            .where((e) => e.bankId == tabId)
-                            .toList(),
-                      ),
+                        : BankDetail(
+                            bankId: tabId,
+                            accountSummaries: provider.accountSummaries
+                                .where((e) => e.bankId == tabId)
+                                .toList(),
+                          ),
               );
             },
           ),

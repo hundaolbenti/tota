@@ -261,10 +261,11 @@ class DatabaseHelper {
       ''');
 
       try {
-        await db.execute(
-            'ALTER TABLE transactions ADD COLUMN categoryId INTEGER');
+        await db
+            .execute('ALTER TABLE transactions ADD COLUMN categoryId INTEGER');
       } catch (e) {
-        print("debug: Error adding categoryId column (might already exist): $e");
+        print(
+            "debug: Error adding categoryId column (might already exist): $e");
       }
 
       await db.execute(
@@ -389,8 +390,7 @@ class DatabaseHelper {
         {
           'iconKey': category.iconKey,
         },
-        where:
-            "builtInKey = ? AND (iconKey IS NULL OR iconKey = '')",
+        where: "builtInKey = ? AND (iconKey IS NULL OR iconKey = '')",
         whereArgs: [category.builtInKey],
       );
       batch.update(
@@ -398,8 +398,7 @@ class DatabaseHelper {
         {
           'description': category.description,
         },
-        where:
-            "builtInKey = ? AND (description IS NULL OR description = '')",
+        where: "builtInKey = ? AND (description IS NULL OR description = '')",
         whereArgs: [category.builtInKey],
       );
       batch.update(
@@ -500,8 +499,7 @@ class DatabaseHelper {
       await addColumn('ALTER TABLE categories ADD COLUMN flow TEXT');
     }
     if (!names.contains('recurring')) {
-      await addColumn(
-          'ALTER TABLE categories ADD COLUMN recurring INTEGER');
+      await addColumn('ALTER TABLE categories ADD COLUMN recurring INTEGER');
     }
     if (!names.contains('builtIn')) {
       await addColumn(
@@ -608,12 +606,13 @@ class DatabaseHelper {
       final desc = (r['description'] as String?)?.trim();
       final flow = (r['flow'] as String?)?.trim().toLowerCase();
 
-      final looksBuiltIn = (iconKey == null || iconKey.isEmpty || iconKey == 'gift') &&
-          (flow == null || flow.isEmpty || flow == 'expense') &&
-          (desc == null ||
-              desc.isEmpty ||
-              desc == 'Gifts and donations' ||
-              desc == 'Gifts received or given');
+      final looksBuiltIn =
+          (iconKey == null || iconKey.isEmpty || iconKey == 'gift') &&
+              (flow == null || flow.isEmpty || flow == 'expense') &&
+              (desc == null ||
+                  desc.isEmpty ||
+                  desc == 'Gifts and donations' ||
+                  desc == 'Gifts received or given');
 
       if (looksBuiltIn) {
         await db.update(

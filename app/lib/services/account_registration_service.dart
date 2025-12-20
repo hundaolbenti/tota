@@ -1,4 +1,3 @@
-import 'package:another_telephony/telephony.dart';
 import 'package:totals/models/account.dart';
 import 'package:totals/models/bank.dart';
 import 'package:totals/repositories/account_repository.dart';
@@ -6,6 +5,7 @@ import 'package:totals/services/sms_service.dart';
 import 'package:totals/services/sms_config_service.dart';
 import 'package:totals/services/bank_config_service.dart';
 import 'package:totals/services/account_sync_status_service.dart';
+import 'package:totals/sms_handler/telephony.dart';
 import 'package:totals/utils/pattern_parser.dart';
 
 class AccountRegistrationService {
