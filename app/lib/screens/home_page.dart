@@ -452,6 +452,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return tabs;
   }
 
+  void _syncActiveTabWithPage(List<int> tabs) {
+    if (!mounted) return;
+    if (!_pageController.hasClients || tabs.isEmpty) return;
+
+    final pageIndex = _pageController.page?.round() ?? _pageController.initialPage;
+    final safeIndex = pageIndex.clamp(0, tabs.length - 1);
+    final pageTabId = tabs[safeIndex];
+
+    if (activeTab != pageTabId) {
+      setState(() {
+        activeTab = pageTabId;
+      });
+    }
+  }
+
   List<Transaction> _todayTransactions(TransactionProvider provider) {
     final now = DateTime.now();
     return provider.allTransactions.where((t) {
@@ -470,6 +485,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Widget _buildHomeContent(TransactionProvider provider) {
     final tabs = _getTabs();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncActiveTabWithPage(tabs);
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
