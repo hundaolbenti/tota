@@ -456,7 +456,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (!mounted) return;
     if (!_pageController.hasClients || tabs.isEmpty) return;
 
-    final pageIndex = _pageController.page?.round() ?? _pageController.initialPage;
+    final pageIndex =
+        _pageController.page?.round() ?? _pageController.initialPage;
     final safeIndex = pageIndex.clamp(0, tabs.length - 1);
     final pageTabId = tabs[safeIndex];
 
@@ -675,7 +676,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                     child: TodayTransactionsList(
                                       transactions: today,
                                       provider: provider,
-                                      highlightedReference: _highlightedReference,
+                                      highlightedReference:
+                                          _highlightedReference,
                                       onTransactionTap: (transaction) async {
                                         setState(() {
                                           if (_highlightedReference ==
@@ -799,30 +801,45 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         //             ),
                         //           ),
                         //         ),
-                        InkWell(
-                          onTap: _openFailedParsesPage,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Tooltip(
-                            message: 'View Failed Parsings',
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                Icons.error_outline,
-                                color: Theme.of(context).iconTheme.color,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ),
+
+                        // InkWell(
+                        //   onTap: _openFailedParsesPage,
+                        //   borderRadius: BorderRadius.circular(8),
+                        //   child: Tooltip(
+                        //     message: 'View Failed Parsings',
+                        //     child: Container(
+                        //       padding: const EdgeInsets.all(8),
+                        //       child: Icon(
+                        //         Icons.error_outline,
+                        //         color: Theme.of(context).iconTheme.color,
+                        //         size: 22,
+                        //       ),
+                        //     ),
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(width: 4),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceVariant
+                        .withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.error_outline,
+                        color: Theme.of(context).iconTheme.color, size: 22),
+                    onPressed: _openFailedParsesPage,
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                  ),
+                ),
                 // Debug menu button
-                const SizedBox(width: 4),
+                const SizedBox(width: 7),
                 // Lock button
                 Container(
                   decoration: BoxDecoration(
