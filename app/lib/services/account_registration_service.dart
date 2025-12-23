@@ -5,6 +5,7 @@ import 'package:totals/services/sms_service.dart';
 import 'package:totals/services/sms_config_service.dart';
 import 'package:totals/services/bank_config_service.dart';
 import 'package:totals/services/account_sync_status_service.dart';
+import 'package:totals/services/notification_service.dart';
 import 'package:totals/sms_handler/telephony.dart';
 import 'package:totals/utils/pattern_parser.dart';
 
@@ -13,6 +14,8 @@ class AccountRegistrationService {
   final AccountSyncStatusService _syncStatusService =
       AccountSyncStatusService.instance;
   final BankConfigService _bankConfigService = BankConfigService();
+  final NotificationService _notificationService =
+      NotificationService.instance;
   List<Bank>? _cachedBanks;
 
   /// Registers a new account and optionally syncs previous SMS messages
@@ -63,12 +66,6 @@ class AccountRegistrationService {
     String accountNumber,
     Function(String stage, double progress)? onProgress,
   ) async {
-    // Set initial sync status
-    _syncStatusService.setSyncStatus(accountNumber, bankId, "Starting sync...");
-    _syncStatusService.setSyncStatus(
-        accountNumber, bankId, "Finding bank messages...");
-    onProgress?.call("Finding bank messages...", 0.3);
-
     // Fetch banks from database (with caching)
     if (_cachedBanks == null) {
       _cachedBanks = await _bankConfigService.getBanks();
@@ -79,12 +76,25 @@ class AccountRegistrationService {
       orElse: () => throw Exception("Bank with id $bankId not found"),
     );
 
+    Future<void> reportProgress(String stage, double progress) async {
+      _syncStatusService.setSyncStatus(accountNumber, bankId, stage);
+      onProgress?.call(stage, progress);
+      await _notificationService.showAccountSyncProgress(
+        accountNumber: accountNumber,
+        bankId: bankId,
+        bankLabel: bank.shortName,
+        stage: stage,
+        progress: progress,
+      );
+    }
+
+    await reportProgress("Starting sync...", 0.05);
+    await reportProgress("Finding bank messages...", 0.3);
+
     final bankCodes = bank.codes;
     print("debug: Syncing SMS for bank ${bank.name} with codes: $bankCodes");
 
-    _syncStatusService.setSyncStatus(
-        accountNumber, bankId, "Fetching SMS messages...");
-    onProgress?.call("Fetching SMS messages...", 0.4);
+    await reportProgress("Fetching SMS messages...", 0.4);
 
     // Get all messages from the bank
     final Telephony telephony = Telephony.instance;
@@ -133,12 +143,16 @@ class AccountRegistrationService {
     if (messages.isEmpty) {
       _syncStatusService.clearSyncStatus(accountNumber, bankId);
       onProgress?.call("No messages found", 1.0);
+      await _notificationService.showAccountSyncComplete(
+        accountNumber: accountNumber,
+        bankId: bankId,
+        bankLabel: bank.shortName,
+        message: "No messages found to import.",
+      );
       return;
     }
 
-    _syncStatusService.setSyncStatus(
-        accountNumber, bankId, "Loading patterns...");
-    onProgress?.call("Loading parsing patterns...", 0.5);
+    await reportProgress("Loading parsing patterns...", 0.5);
 
     // Load patterns for this bank
     final configService = SmsConfigService();
@@ -149,12 +163,16 @@ class AccountRegistrationService {
       print("debug: No patterns found for bank $bankId, skipping parsing");
       _syncStatusService.clearSyncStatus(accountNumber, bankId);
       onProgress?.call("No patterns found", 1.0);
+      await _notificationService.showAccountSyncComplete(
+        accountNumber: accountNumber,
+        bankId: bankId,
+        bankLabel: bank.shortName,
+        message: "No patterns found for this bank.",
+      );
       return;
     }
 
-    _syncStatusService.setSyncStatus(
-        accountNumber, bankId, "Parsing messages...");
-    onProgress?.call("Parsing messages...", 0.6);
+    await reportProgress("Parsing messages...", 0.6);
 
     // Process messages in batches for better performance
     int processedCount = 0;
@@ -180,11 +198,7 @@ class AccountRegistrationService {
       final batchProgress = batchEnd / totalMessages;
       final currentProgress = baseProgress + (batchProgress * 0.35);
       final status = "Processing ${batchEnd}/$totalMessages messages...";
-      _syncStatusService.setSyncStatus(accountNumber, bankId, status);
-      onProgress?.call(
-        "Processing messages ${batchStart + 1}-$batchEnd of $totalMessages...",
-        currentProgress,
-      );
+      await reportProgress(status, currentProgress);
 
       // Process batch concurrently
       final results = await Future.wait(
@@ -250,9 +264,7 @@ class AccountRegistrationService {
 
     // Update account balance from the latest message
     if (latestBalanceDetails != null) {
-      _syncStatusService.setSyncStatus(
-          accountNumber, bankId, "Updating balance...");
-      onProgress?.call("Updating account balance...", 0.95);
+      await reportProgress("Updating account balance...", 0.95);
       await _updateAccountBalanceFromLatestMessage(
         bankId,
         latestBalanceDetails,
@@ -265,6 +277,12 @@ class AccountRegistrationService {
     onProgress?.call(
       "Complete! Processed $processedCount transactions",
       1.0,
+    );
+    await _notificationService.showAccountSyncComplete(
+      accountNumber: accountNumber,
+      bankId: bankId,
+      bankLabel: bank.shortName,
+      message: "Imported $processedCount transactions.",
     );
 
     print(

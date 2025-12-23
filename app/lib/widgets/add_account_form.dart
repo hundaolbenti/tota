@@ -67,6 +67,7 @@ class _RegisterAccountFormState extends State<RegisterAccountForm> {
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
+      final messenger = ScaffoldMessenger.of(context);
       // Dismiss the form first to avoid black screen
       if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
@@ -85,7 +86,7 @@ class _RegisterAccountFormState extends State<RegisterAccountForm> {
         final trimmedAccountHolderName = _accountHolderName.text.trim();
 
         // Create account (sync happens in background)
-        await service.registerAccount(
+        final account = await service.registerAccount(
           accountNumber: trimmedAccountNumber,
           accountHolderName: trimmedAccountHolderName,
           bankId: selected_bank,
@@ -95,6 +96,17 @@ class _RegisterAccountFormState extends State<RegisterAccountForm> {
             provider.loadData();
           },
         );
+
+        if (account != null && syncPreviousSms) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: const Text(
+                "Adding your account. You can leave the app, we'll notify you when it's done.",
+              ),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
 
         // Refresh data to show new account
         provider.loadData();
