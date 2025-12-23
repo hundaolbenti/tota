@@ -17,6 +17,9 @@ import 'package:totals/widgets/analytics/transactions_list.dart';
 import 'package:totals/widgets/analytics/chart_data_point.dart';
 import 'package:totals/widgets/analytics/chart_data_utils.dart';
 import 'package:totals/widgets/categorize_transaction_sheet.dart';
+import 'package:totals/widgets/category_filter_button.dart';
+import 'package:totals/widgets/category_filter_sheet.dart';
+import 'package:totals/utils/category_icons.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -33,6 +36,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   String _sortBy = 'Date';
   String _chartType = 'Heatmap';
   int _timeFrameOffset = 0;
+  Set<int?> _selectedIncomeCategoryIds = {};
+  Set<int?> _selectedExpenseCategoryIds = {};
 
   late PageController _timeFramePageController;
   bool _isTransitioning = false;
@@ -269,6 +274,44 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return true;
   }
 
+  bool _matchesCategorySelection(int? categoryId, Set<int?> selection) {
+    if (selection.isEmpty) return true;
+    if (categoryId == null) return selection.contains(null);
+    return selection.contains(categoryId);
+  }
+
+  List<Transaction> _filterByCategorySelections(
+    List<Transaction> transactions,
+  ) {
+    if (_selectedIncomeCategoryIds.isEmpty &&
+        _selectedExpenseCategoryIds.isEmpty) {
+      return transactions;
+    }
+
+    final filtered = <Transaction>[];
+    for (final transaction in transactions) {
+      if (transaction.type == 'CREDIT') {
+        if (_matchesCategorySelection(
+            transaction.categoryId, _selectedIncomeCategoryIds)) {
+          filtered.add(transaction);
+        }
+        continue;
+      }
+      if (transaction.type == 'DEBIT') {
+        if (_matchesCategorySelection(
+            transaction.categoryId, _selectedExpenseCategoryIds)) {
+          filtered.add(transaction);
+        }
+        continue;
+      }
+      if (_selectedIncomeCategoryIds.isEmpty &&
+          _selectedExpenseCategoryIds.isEmpty) {
+        filtered.add(transaction);
+      }
+    }
+    return filtered;
+  }
+
   bool _matchesPeriod(DateTime transactionDate, DateTime baseDate) {
     if (_selectedPeriod == 'Week') {
       final baseDay = DateTime(baseDate.year, baseDate.month, baseDate.day);
@@ -412,6 +455,33 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
+  Future<void> _openCategoryFilterSheet({
+    required TransactionProvider provider,
+    required String flow,
+  }) async {
+    final currentSelection = flow == 'income'
+        ? _selectedIncomeCategoryIds
+        : _selectedExpenseCategoryIds;
+    final result = await showCategoryFilterSheet(
+      context: context,
+      provider: provider,
+      selectedCategoryIds: currentSelection,
+      title: flow == 'income'
+          ? 'Filter income categories'
+          : 'Filter expense categories',
+      flow: flow,
+    );
+    if (result == null) return;
+
+    setState(() {
+      if (flow == 'income') {
+        _selectedIncomeCategoryIds = result.toSet();
+      } else {
+        _selectedExpenseCategoryIds = result.toSet();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<TransactionProvider>(
@@ -429,12 +499,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           accountsByBank,
           selectedAccount,
         );
+        final categoryFilteredBase =
+            _filterByCategorySelections(baseFilteredTransactions);
         final filteredTransactions =
-            _filterByPeriod(baseFilteredTransactions, baseDate);
+            _filterByPeriod(categoryFilteredBase, baseDate);
         final barChartTransactions =
-            _filterTransactionsForBarChart(allTransactions);
+            _filterByCategorySelections(_filterTransactionsForBarChart(allTransactions));
         final pnlTransactions =
-            _filterTransactionsForPnl(allTransactions, selectedAccount);
+            _filterByCategorySelections(
+                _filterTransactionsForPnl(allTransactions, selectedAccount));
 
         final chartData = _getChartData(filteredTransactions, baseDate);
         final chartDataByOffset = <int, List<ChartDataPoint>>{};
@@ -443,7 +516,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           return chartDataByOffset.putIfAbsent(offset, () {
             final offsetDate = _getBaseDate(offset);
             final periodFiltered = _filterByPeriod(
-              baseFilteredTransactions,
+              categoryFilteredBase,
               offsetDate,
             );
             return _getChartData(periodFiltered, offsetDate);
@@ -516,6 +589,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       selectedPeriod: _selectedPeriod,
                       selectedBankFilter: _selectedBankFilter,
                       selectedAccountFilter: _selectedAccountFilter,
+                      selectedIncomeCategoryIds: _selectedIncomeCategoryIds,
+                      selectedExpenseCategoryIds: _selectedExpenseCategoryIds,
                       getBaseDate: _getBaseDate,
                       onCardSelected: (card) {
                         setState(() {
@@ -527,6 +602,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        CategoryFilterIconButton(
+                          icon: Icons.category_rounded,
+                          selectedCount: _selectedIncomeCategoryIds.length,
+                          tooltip: 'Income categories',
+                          iconColor: Colors.green,
+                          onTap: () => _openCategoryFilterSheet(
+                            provider: provider,
+                            flow: 'income',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        CategoryFilterIconButton(
+                          icon: Icons.category_rounded,
+                          selectedCount: _selectedExpenseCategoryIds.length,
+                          tooltip: 'Expense categories',
+                          iconColor: Theme.of(context).colorScheme.error,
+                          onTap: () => _openCategoryFilterSheet(
+                            provider: provider,
+                            flow: 'expense',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         ChartTypeSelector(
                           chartType: _chartType,
                           onChartTypeChanged: (type) {

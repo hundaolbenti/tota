@@ -3,6 +3,8 @@ import 'package:totals/models/transaction.dart';
 import 'package:totals/providers/transaction_provider.dart';
 import 'package:totals/widgets/analytics/transactions_list.dart';
 import 'package:totals/widgets/categorize_transaction_sheet.dart';
+import 'package:totals/widgets/category_filter_button.dart';
+import 'package:totals/widgets/category_filter_sheet.dart';
 
 class TransactionsForPeriodPage extends StatefulWidget {
   final List<Transaction> transactions;
@@ -25,6 +27,7 @@ class TransactionsForPeriodPage extends StatefulWidget {
 
 class _TransactionsForPeriodPageState extends State<TransactionsForPeriodPage> {
   String _sortBy = 'Date';
+  Set<int?> _selectedCategoryIds = {};
 
   Transaction? _findUpdatedTransaction(
     Transaction original,
@@ -47,6 +50,29 @@ class _TransactionsForPeriodPageState extends State<TransactionsForPeriodPage> {
         .map((transaction) =>
             _findUpdatedTransaction(transaction, updated) ?? transaction)
         .toList();
+  }
+
+  bool _matchesCategoryFilter(Transaction transaction) {
+    if (_selectedCategoryIds.isEmpty) return true;
+    final categoryId = transaction.categoryId;
+    if (categoryId == null) return _selectedCategoryIds.contains(null);
+    return _selectedCategoryIds.contains(categoryId);
+  }
+
+  List<Transaction> _filterByCategory(List<Transaction> transactions) {
+    return transactions.where(_matchesCategoryFilter).toList(growable: false);
+  }
+
+  Future<void> _openCategoryFilterSheet() async {
+    final result = await showCategoryFilterSheet(
+      context: context,
+      provider: widget.provider,
+      selectedCategoryIds: _selectedCategoryIds,
+    );
+    if (result == null) return;
+    setState(() {
+      _selectedCategoryIds = result.toSet();
+    });
   }
 
   @override
@@ -76,26 +102,42 @@ class _TransactionsForPeriodPageState extends State<TransactionsForPeriodPage> {
           animation: widget.provider,
           builder: (context, _) {
             final refreshedTransactions = _refreshTransactions(widget.provider);
+            final filteredTransactions =
+                _filterByCategory(refreshedTransactions);
             return SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: TransactionsList(
-                  transactions: refreshedTransactions,
-                  sortBy: _sortBy,
-                  provider: widget.provider,
-                  includeBottomPadding: false,
-                  onTransactionTap: (transaction) async {
-                    await showCategorizeTransactionSheet(
-                      context: context,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: CategoryFilterButton(
+                        label: 'Categories',
+                        selectedCount: _selectedCategoryIds.length,
+                        onTap: _openCategoryFilterSheet,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TransactionsList(
+                      transactions: filteredTransactions,
+                      sortBy: _sortBy,
                       provider: widget.provider,
-                      transaction: transaction,
-                    );
-                  },
-                  onSortChanged: (sort) {
-                    setState(() {
-                      _sortBy = sort;
-                    });
-                  },
+                      includeBottomPadding: false,
+                      onTransactionTap: (transaction) async {
+                        await showCategorizeTransactionSheet(
+                          context: context,
+                          provider: widget.provider,
+                          transaction: transaction,
+                        );
+                      },
+                      onSortChanged: (sort) {
+                        setState(() {
+                          _sortBy = sort;
+                        });
+                      },
+                    ),
+                  ],
                 ),
               ),
             );
