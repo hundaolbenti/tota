@@ -8,6 +8,7 @@ workflows:
       - name: Get Flutter packages
         script: | 
           cd app
+          rm -f pubspec.lock
           flutter pub get
       - name: Build APK Debug
         script: | 
