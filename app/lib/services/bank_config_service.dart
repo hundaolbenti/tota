@@ -27,6 +27,16 @@ class BankConfigService {
       maskPattern: 4,
       uniformMasking: true,
     ),
+    Bank(
+      id: 10,
+      name: "Sharjah Islamic Bank",
+      shortName: "SIB",
+      codes: ["SIB"],
+      image: "assets/images/sib.png",
+      currency: "AED",
+      maskPattern: 4,
+      uniformMasking: false, // Cards and A/C use different number formats
+    ),
   ];
 
   Future<List<Bank>> getBanks() async {
@@ -161,6 +171,22 @@ class BankConfigService {
               currency: "AED",
               maskPattern: 4,
               uniformMasking: true,
+            ),
+          );
+        }
+
+        // Manually add SIB if not present (local override)
+        if (!banks.any((b) => b.codes.contains("SIB"))) {
+          banks.add(
+            Bank(
+              id: 10,
+              name: "Sharjah Islamic Bank",
+              shortName: "SIB",
+              codes: ["SIB"],
+              image: "assets/images/sib.png",
+              currency: "AED",
+              maskPattern: 4,
+              uniformMasking: false,
             ),
           );
         }

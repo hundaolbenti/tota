@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       path,
-      version: 15,
+      version: 16,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -481,6 +481,19 @@ class DatabaseHelper {
         print("debug: Cleared banks and patterns for v15 migration");
       } catch (e) {
         print("debug: Error clearing tables for v15: $e");
+      }
+    }
+
+    if (oldVersion < 16) {
+      // Migration: Add SIB bank support
+      // Force re-seeding of banks and patterns to pick up SIB
+      try {
+        await db.delete('banks');
+        await db.delete('sms_patterns');
+        print(
+            "debug: Cleared banks and patterns for v16 migration (SIB support)");
+      } catch (e) {
+        print("debug: Error clearing tables for v16: $e");
       }
     }
   }

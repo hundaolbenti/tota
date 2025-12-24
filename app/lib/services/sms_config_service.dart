@@ -147,6 +147,37 @@ class SmsConfigService {
       refRequired: true,
       hasAccount: false,
     ),
+    // SIB (Sharjah Islamic Bank) patterns
+    SmsPattern(
+      bankId: 10,
+      senderId: "SIB",
+      regex:
+          r"Card No\. (?<account>\d+X+\d+) Purchase Txn\. AED -(?<amount>[\d,.]+) at (?<receiver>.*?)\. Available Balance is AED \+(?<balance>[\d,.]+)",
+      type: "DEBIT",
+      description: "SIB card purchase",
+      refRequired: false,
+      hasAccount: true,
+    ),
+    SmsPattern(
+      bankId: 10,
+      senderId: "SIB",
+      regex:
+          r"A/C: (?<account>\d+X+\d+) amount of AED (?<amount>[\d,.]+) has been credited\. Available Balance is AED \+(?<balance>[\d,.]+)",
+      type: "CREDIT",
+      description: "SIB account credit (format 1)",
+      refRequired: false,
+      hasAccount: true,
+    ),
+    SmsPattern(
+      bankId: 10,
+      senderId: "SIB",
+      regex:
+          r"A/C: (?<account>\d+X+\d+) has been credited AED (?<amount>[\d,.]+)\. Available Balance is AED \+(?<balance>[\d,.]+)",
+      type: "CREDIT",
+      description: "SIB account credit (format 2)",
+      refRequired: false,
+      hasAccount: true,
+    ),
   ];
 
   void debugSms(String smsText) {
@@ -339,6 +370,42 @@ class SmsConfigService {
               description: "e& money card load",
               refRequired: true,
               hasAccount: false,
+            ),
+          ]);
+        }
+
+        // Manually add SIB patterns if not present (local override)
+        if (!patterns.any((p) => p.senderId == "SIB")) {
+          patterns.addAll([
+            SmsPattern(
+              bankId: 10,
+              senderId: "SIB",
+              regex:
+                  r"Card No\. (?<account>\d+X+\d+) Purchase Txn\. AED -(?<amount>[\d,.]+) at (?<receiver>.*?)\. Available Balance is AED \+(?<balance>[\d,.]+)",
+              type: "DEBIT",
+              description: "SIB card purchase",
+              refRequired: false,
+              hasAccount: true,
+            ),
+            SmsPattern(
+              bankId: 10,
+              senderId: "SIB",
+              regex:
+                  r"A/C: (?<account>\d+X+\d+) amount of AED (?<amount>[\d,.]+) has been credited\. Available Balance is AED \+(?<balance>[\d,.]+)",
+              type: "CREDIT",
+              description: "SIB account credit (format 1)",
+              refRequired: false,
+              hasAccount: true,
+            ),
+            SmsPattern(
+              bankId: 10,
+              senderId: "SIB",
+              regex:
+                  r"A/C: (?<account>\d+X+\d+) has been credited AED (?<amount>[\d,.]+)\. Available Balance is AED \+(?<balance>[\d,.]+)",
+              type: "CREDIT",
+              description: "SIB account credit (format 2)",
+              refRequired: false,
+              hasAccount: true,
             ),
           ]);
         }
