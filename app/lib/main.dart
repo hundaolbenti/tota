@@ -24,8 +24,6 @@ void main() async {
     try {
       await Workmanager().initialize(
         callbackDispatcher,
-        // isInDebugMode: kDebugMode,
-        isInDebugMode: false,
       );
       await NotificationScheduler.syncDailySummarySchedule();
     } catch (e) {
