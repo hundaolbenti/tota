@@ -1,0 +1,19 @@
+workflows:
+  android-debug:
+    name: Android Debug Workflow
+    max_build_duration: 120
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get Flutter packages
+        script: | 
+          cd app
+          flutter pub get
+      - name: Build APK Debug
+        script: | 
+          cd app
+          flutter build apk --debug
+    artifacts:
+      - app/build/**/outputs/**/*.apk
+      - app/flutter_drive.log
+      - flutter_drive.log
