@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       path,
-      version: 14,
+      version: 15,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -437,6 +437,52 @@ class DatabaseHelper {
       }
     }
 
+    if (oldVersion < 15) {
+      // Migration for e& money ID change (8 -> 9)
+      // Remote config now uses ID 8 for M-Pesa, so we move local e& money to 9.
+      try {
+        await db.transaction((txn) async {
+          // Update transactions
+          await txn.update(
+            'transactions',
+            {'bankId': 9},
+            where: 'bankId = ?',
+            whereArgs: [8],
+          );
+          print("debug: Migrated transactions from bankId 8 to 9");
+
+          // Update accounts
+          await txn.update(
+            'accounts',
+            {'bank': 9},
+            where: 'bank = ?',
+            whereArgs: [8],
+          );
+          print("debug: Migrated accounts from bankId 8 to 9");
+
+          // Update sms_patterns
+          await txn.update(
+            'sms_patterns',
+            {'bankId': 9},
+            where: 'bankId = ?',
+            whereArgs: [8],
+          );
+          print("debug: Migrated sms_patterns from bankId 8 to 9");
+        });
+      } catch (e) {
+        print("debug: Error migrating bank IDs: $e");
+      }
+
+      // Force re-seeding of banks to pick up the new ID 9 for e& money
+      try {
+        await db.delete('banks');
+        // We also clear patterns to ensure new patterns for ID 9 are loaded correctly
+        await db.delete('sms_patterns');
+        print("debug: Cleared banks and patterns for v15 migration");
+      } catch (e) {
+        print("debug: Error clearing tables for v15: $e");
+      }
+    }
   }
 
   Future<void> _seedBuiltInCategories(Database db) async {

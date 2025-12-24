@@ -98,7 +98,7 @@ class SmsConfigService {
     ),
     // e& money patterns
     SmsPattern(
-      bankId: 8,
+      bankId: 9,
       senderId: "eandmoney",
       regex:
           r"A deposit of AED (?<amount>[\d,.]+)  has been made into your e& money\. Your new balance is (?<balance>[\d,.]+) AED\. Your transaction ID is  (?<reference>\d+)",
@@ -108,7 +108,7 @@ class SmsConfigService {
       hasAccount: false,
     ),
     SmsPattern(
-      bankId: 8,
+      bankId: 9,
       senderId: "eandmoney",
       regex:
           r"Good news! AED (?<amount>[\d,.]+) from (?<sender>.*?) landed in your account\.\s+Check your new balance: (?<balance>[\d,.]+)\s+Transaction ID: (?<reference>\d+)",
@@ -118,7 +118,7 @@ class SmsConfigService {
       hasAccount: false,
     ),
     SmsPattern(
-      bankId: 8,
+      bankId: 9,
       senderId: "eandmoney",
       regex:
           r"purchase of AED (?<amount>[\d,.]+) was successfully completed at (?<receiver>.*?) using your e& money card ending with (?<account>\d+).*?Available balance: AED (?<balance>[\d,.]+).*?Transaction ID: (?<reference>\d+)",
@@ -128,7 +128,7 @@ class SmsConfigService {
       hasAccount: true,
     ),
     SmsPattern(
-      bankId: 8,
+      bankId: 9,
       senderId: "eandmoney",
       regex:
           r"You sent AED (?<amount>[\d,.]+) to (?<receiver>.*?)\.\s+New balance: (?<balance>[\d,.]+)\s+Transaction ID: (?<reference>\d+)",
@@ -138,7 +138,7 @@ class SmsConfigService {
       hasAccount: false,
     ),
     SmsPattern(
-      bankId: 8,
+      bankId: 9,
       senderId: "eandmoney",
       regex:
           r"AED (?<amount>[\d,.]+) added to your e\& money using your card\..*?Your updated balance is AED (?<balance>[\d,.]+) \s+Transaction ID: (?<reference>\d+)",
@@ -285,6 +285,62 @@ class SmsConfigService {
           patterns = patternsList
               .map((item) => SmsPattern.fromJson(item as Map<String, dynamic>))
               .toList();
+        }
+
+        // Manually add e& money patterns if not present (local override)
+        if (!patterns.any((p) => p.senderId == "eandmoney")) {
+          patterns.addAll([
+            SmsPattern(
+              bankId: 9,
+              senderId: "eandmoney",
+              regex:
+                  r"A deposit of AED (?<amount>[\d,.]+)  has been made into your e& money\. Your new balance is (?<balance>[\d,.]+) AED\. Your transaction ID is  (?<reference>\d+)",
+              type: "CREDIT",
+              description: "e& money deposit",
+              refRequired: true,
+              hasAccount: false,
+            ),
+            SmsPattern(
+              bankId: 9,
+              senderId: "eandmoney",
+              regex:
+                  r"Good news! AED (?<amount>[\d,.]+) from (?<sender>.*?) landed in your account\.\s+Check your new balance: (?<balance>[\d,.]+)\s+Transaction ID: (?<reference>\d+)",
+              type: "CREDIT",
+              description: "e& money received",
+              refRequired: true,
+              hasAccount: false,
+            ),
+            SmsPattern(
+              bankId: 9,
+              senderId: "eandmoney",
+              regex:
+                  r"purchase of AED (?<amount>[\d,.]+) was successfully completed at (?<receiver>.*?) using your e& money card ending with (?<account>\d+).*?Available balance: AED (?<balance>[\d,.]+).*?Transaction ID: (?<reference>\d+)",
+              type: "DEBIT",
+              description: "e& money purchase",
+              refRequired: true,
+              hasAccount: true,
+            ),
+            SmsPattern(
+              bankId: 9,
+              senderId: "eandmoney",
+              regex:
+                  r"You sent AED (?<amount>[\d,.]+) to (?<receiver>.*?)\.\s+New balance: (?<balance>[\d,.]+)\s+Transaction ID: (?<reference>\d+)",
+              type: "DEBIT",
+              description: "e& money sent",
+              refRequired: true,
+              hasAccount: false,
+            ),
+            SmsPattern(
+              bankId: 9,
+              senderId: "eandmoney",
+              regex:
+                  r"AED (?<amount>[\d,.]+) added to your e\& money using your card\..*?Your updated balance is AED (?<balance>[\d,.]+) \s+Transaction ID: (?<reference>\d+)",
+              type: "CREDIT",
+              description: "e& money card load",
+              refRequired: true,
+              hasAccount: false,
+            ),
+          ]);
         }
         print("debug: Fetched ${patterns.length} patterns from remote");
         return patterns;

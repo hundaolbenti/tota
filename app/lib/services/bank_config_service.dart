@@ -18,7 +18,7 @@ class BankConfigService {
       uniformMasking: true,
     ),
     Bank(
-      id: 8,
+      id: 9,
       name: "e& money",
       shortName: "e& money",
       codes: ["eandmoney"],
@@ -30,7 +30,56 @@ class BankConfigService {
   ];
 
   Future<List<Bank>> getBanks() async {
-    // Force use of default banks and sync to DB
+    final db = await DatabaseHelper.instance.database;
+
+    // First, try to load from database
+    final List<Map<String, dynamic>> maps = await db.query('banks');
+    if (maps.isNotEmpty) {
+      try {
+        final banks = maps.map((map) {
+          return Bank.fromJson({
+            'id': map['id'],
+            'name': map['name'],
+            'shortName': map['shortName'],
+            'codes': jsonDecode(map['codes'] as String),
+            'image': map['image'],
+            'currency': map['currency'], // Added currency
+            'maskPattern': map['maskPattern'],
+            'uniformMasking': map['uniformMasking'] == null
+                ? null
+                : (map['uniformMasking'] == 1),
+            'simBased': map['simBased'] == null ? null : (map['simBased'] == 1),
+            'colors': map['colors'] != null
+                ? List<String>.from(jsonDecode(map['colors'] as String))
+                : null,
+          });
+        }).toList();
+        print("debug: Loaded ${banks.length} banks from database");
+        return banks;
+      } catch (e) {
+        print("debug: Error parsing stored banks: $e");
+        // Fall through to fetch from remote
+      }
+    }
+
+    // If not in database, try to fetch from remote (only if internet available)
+    final hasInternet = await _hasInternetConnection();
+    if (hasInternet) {
+      try {
+        final banks = await _fetchRemoteBanks();
+        if (banks.isNotEmpty) {
+          await saveBanks(banks);
+          return banks;
+        }
+      } catch (e) {
+        print("debug: Error fetching remote banks: $e");
+      }
+    } else {
+      print("debug: No internet connection, cannot fetch remote banks");
+    }
+
+    // Fallback to default list if no banks found
+    print("debug: No banks available, using defaults");
     await saveBanks(_defaultBanks);
     return _defaultBanks;
   }
@@ -97,6 +146,23 @@ class BankConfigService {
           banks = banksList
               .map((item) => Bank.fromJson(item as Map<String, dynamic>))
               .toList();
+        }
+
+        // Manually add e& money if not present (local override)
+        // This ensures e& money is available even if not on the remote server yet
+        if (!banks.any((b) => b.codes.contains("eandmoney"))) {
+          banks.add(
+            Bank(
+              id: 9,
+              name: "e& money",
+              shortName: "e& money",
+              codes: ["eandmoney"],
+              image: "assets/images/eandmoney.png",
+              currency: "AED",
+              maskPattern: 4,
+              uniformMasking: true,
+            ),
+          );
         }
 
         print("debug: Fetched ${banks.length} banks from remote");
