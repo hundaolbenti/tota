@@ -13,59 +13,17 @@ class BankConfigService {
       shortName: "CBE",
       codes: ["CBE"],
       image: "assets/images/cbe.png",
+      currency: "ETB",
       maskPattern: 4,
       uniformMasking: true,
     ),
     Bank(
-      id: 2,
-      name: "Awash Bank",
-      shortName: "Awash",
-      codes: ["Awash", "Awash Bank", "AwashBank"],
-      image: "assets/images/awash.png",
-      maskPattern: 4,
-      uniformMasking: true,
-    ),
-    Bank(
-      id: 3,
-      name: "Bank Of Abyssinia",
-      shortName: "BOA",
-      codes: ["BOA"],
-      image: "assets/images/boa.png",
-      maskPattern: 4,
-      uniformMasking: true,
-    ),
-    Bank(
-      id: 4,
-      name: "Dashen Bank",
-      shortName: "Dashen",
-      codes: ["Dashen", "DashenBank"],
-      image: "assets/images/dashen.png",
-      maskPattern: 4,
-      uniformMasking: true,
-    ),
-    Bank(
-      id: 5,
-      name: "Zemen Bank",
-      shortName: "Zemen",
-      codes: ["Zemen"],
-      image: "assets/images/zemen.png",
-      maskPattern: 4,
-      uniformMasking: true,
-    ),
-    Bank(
-      id: 6,
-      name: "Telebirr",
-      shortName: "Telebirr",
-      codes: ["telebirr", "Telebirr", "127"],
-      image: "assets/images/telebirr.png",
-      uniformMasking: false,
-    ),
-    Bank(
-      id: 7,
-      name: "Nib Bank",
-      shortName: "NIB",
-      codes: ["NIB"],
-      image: "assets/images/nib.png",
+      id: 8,
+      name: "e& money",
+      shortName: "e& money",
+      codes: ["eandmoney"],
+      image: "assets/images/eandmoney.png",
+      currency: "AED",
       maskPattern: 4,
       uniformMasking: true,
     ),
@@ -85,6 +43,7 @@ class BankConfigService {
             'shortName': map['shortName'],
             'codes': jsonDecode(map['codes'] as String),
             'image': map['image'],
+            'currency': map['currency'], // Added currency
             'maskPattern': map['maskPattern'],
             'uniformMasking': map['uniformMasking'] == null
                 ? null
@@ -102,6 +61,7 @@ class BankConfigService {
         // Fall through to fetch from remote
       }
     }
+
 
     // If not in database, try to fetch from remote (only if internet available)
     final hasInternet = await _hasInternetConnection();
@@ -217,6 +177,7 @@ class BankConfigService {
             'shortName': bank.shortName,
             'codes': jsonEncode(bank.codes),
             'image': bank.image,
+            'currency': bank.currency,
             'maskPattern': bank.maskPattern,
             'uniformMasking': bank.uniformMasking == null
                 ? null
@@ -226,6 +187,7 @@ class BankConfigService {
           },
           conflictAlgorithm: ConflictAlgorithm.replace);
     }
+
     await batch.commit(noResult: true);
     print("debug: Saved ${banks.length} banks to database");
   }

@@ -301,7 +301,8 @@ class _IncomeExpenseCard extends StatelessWidget {
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
-                'ETB ${_formatCurrency(amount)}',
+                'AED ${_formatCurrency(amount)}',
+
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,

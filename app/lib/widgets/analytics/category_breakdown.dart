@@ -101,7 +101,7 @@ class _CategoryBreakdownCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'ETB ${_formatAmount(totalAmount)}',
+                'AED ${_formatAmount(totalAmount)}',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -188,7 +188,7 @@ class _CategoryBreakdownRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  'ETB ${_formatAmount(stat.amount)}',
+                  'AED ${_formatAmount(stat.amount)}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

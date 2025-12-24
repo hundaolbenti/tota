@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide Category;
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:totals/models/category.dart';
 import 'package:totals/providers/transaction_provider.dart';
@@ -84,7 +84,8 @@ class CategoriesPage extends StatelessWidget {
       showDragHandle: true,
       isScrollControlled: true,
       builder: (context) {
-        return _CategoryEditorSheet(existing: existing, initialFlow: initialFlow);
+        return _CategoryEditorSheet(
+            existing: existing, initialFlow: initialFlow);
       },
     );
 
@@ -174,9 +175,10 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
         TextEditingController(text: widget.existing?.description ?? '');
     _categoryType = widget.existing?.type ?? CategoryType.nonEssential;
     _iconKey = widget.existing?.iconKey ?? 'more_horiz';
-    _flow = (widget.existing?.flow ?? widget.initialFlow).toLowerCase() == 'income'
-        ? 'income'
-        : 'expense';
+    _flow =
+        (widget.existing?.flow ?? widget.initialFlow).toLowerCase() == 'income'
+            ? 'income'
+            : 'expense';
     _recurring = widget.existing?.recurring ?? false;
   }
 
@@ -194,9 +196,8 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
     final isIncome = _flow == 'income';
     final essentialLabel = isIncome ? 'Main income' : 'Essential';
     final nonEssentialLabel = isIncome ? 'Side income' : 'Non-essential';
-    final essentialSubtitle = isIncome
-        ? 'Primary income sources'
-        : 'Used for spending insights';
+    final essentialSubtitle =
+        isIncome ? 'Primary income sources' : 'Used for spending insights';
     final nonEssentialSubtitle = isIncome
         ? 'Secondary income sources'
         : 'Optional or discretionary spending';
@@ -327,8 +328,8 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
                   final rawCount =
                       ((maxWidth + gap) / (itemSize + gap)).floor();
                   final crossAxisCount = rawCount.clamp(3, 7);
-                  final gridWidth =
-                      (crossAxisCount * itemSize) + ((crossAxisCount - 1) * gap);
+                  final gridWidth = (crossAxisCount * itemSize) +
+                      ((crossAxisCount - 1) * gap);
 
                   return Center(
                     child: ConstrainedBox(
@@ -337,8 +338,7 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: categoryIconOptions.length,
-                        gridDelegate:
-                            SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
                           mainAxisSpacing: gap,
                           crossAxisSpacing: gap,
@@ -385,13 +385,11 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
                             ),
                             actions: [
                               TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(context, false),
+                                onPressed: () => Navigator.pop(context, false),
                                 child: const Text('Cancel'),
                               ),
                               TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(context, true),
+                                onPressed: () => Navigator.pop(context, true),
                                 child: const Text('Delete'),
                               ),
                             ],
@@ -494,7 +492,8 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+            color:
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(

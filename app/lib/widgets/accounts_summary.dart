@@ -201,7 +201,7 @@ class _AccountsSummaryListState extends State<AccountsSummaryList> {
                                                       account.accountNumber)
                                               ? formatNumberWithComma(
                                                       account.balance) +
-                                                  " ETB"
+                                                  " ${_getBankInfo(account.bankId)?.currency ?? 'AED'}"
                                               : "******",
                                           style: TextStyle(
                                             fontSize: 14,
@@ -322,7 +322,7 @@ class _AccountsSummaryListState extends State<AccountsSummaryList> {
                                     Text(
                                         formatNumberWithComma(
                                                 account.totalCredit) +
-                                            " ETB",
+                                            " ${_getBankInfo(account.bankId)?.currency ?? 'AED'}",
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 13,
@@ -349,7 +349,7 @@ class _AccountsSummaryListState extends State<AccountsSummaryList> {
                                     Text(
                                         formatNumberWithComma(
                                                 account.totalDebit) +
-                                            " ETB",
+                                            " ${_getBankInfo(account.bankId)?.currency ?? 'AED'}",
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Theme.of(context)
@@ -380,7 +380,7 @@ class _AccountsSummaryListState extends State<AccountsSummaryList> {
                                     ),
                                     Text(
                                         formatNumberWithComma(account.balance) +
-                                            " ETB",
+                                            " ${_getBankInfo(account.bankId)?.currency ?? 'AED'}",
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 13,

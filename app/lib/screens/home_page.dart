@@ -5,6 +5,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:totals/providers/transaction_provider.dart';
 import 'package:totals/models/transaction.dart';
 import 'package:totals/services/bank_config_service.dart';
+import 'package:totals/models/bank.dart';
 import 'package:totals/services/sms_service.dart';
 import 'package:totals/widgets/auth_page.dart';
 import 'package:totals/widgets/home_tabs.dart';
@@ -107,10 +108,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ? '-'
                 : '';
 
+        final currency = AppConstants.banks
+                .firstWhere(
+                  (b) => b.id == tx.bankId,
+                  orElse: () => const Bank(
+                    id: -1,
+                    name: 'Totals',
+                    shortName: 'Totals',
+                    codes: [],
+                    image: '',
+                  ),
+                )
+                .currency ??
+            'AED';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '$bankLabel: $sign ETB ${formatNumberWithComma(tx.amount)} • Tap to categorize',
+              '$bankLabel: $sign $currency ${formatNumberWithComma(tx.amount)} • Tap to categorize',
             ),
             duration: const Duration(seconds: 4),
           ),
@@ -177,10 +192,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _pageController.dispose();
     _mainPageController.dispose();
     super.dispose();
-  }
-
-  Future<void> _openTodayAndCategorize(String reference) async {
-    await _openTodayFromNotification(reference, openSheet: true);
   }
 
   Future<void> _openTodayFromNotification(

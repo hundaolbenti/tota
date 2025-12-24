@@ -287,7 +287,8 @@ class _BanksSummaryListState extends State<BanksSummaryList> {
                                       ? formatNumberAbbreviated(
                                               (bank.totalBalance * 100).ceil() /
                                                   100.0) +
-                                          " ETB"
+                                          " ${bankInfo.currency ?? 'AED'}"
+
                                       : "*" * 5,
                                   style: const TextStyle(
                                     fontSize: 18,

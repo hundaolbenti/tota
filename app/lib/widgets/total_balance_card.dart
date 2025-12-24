@@ -51,7 +51,7 @@ class _TotalBalanceCardState extends State<TotalBalanceCard> {
   @override
   Widget build(BuildContext context) {
     final displayBalance = widget.showBalance
-        ? "${formatNumberWithComma(widget.summary?.totalBalance ?? 0.0)} ETB"
+        ? "${formatNumberWithComma(widget.summary?.totalBalance ?? 0.0)} AED"
         : "******";
 
     return GestureDetector(
@@ -338,7 +338,7 @@ class _TotalBalanceCardState extends State<TotalBalanceCard> {
                             ),
                           ),
                           Text(
-                              "${formatNumberWithComma(widget.summary?.totalCredit)} ETB",
+                              "${formatNumberWithComma(widget.summary?.totalCredit)} AED",
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
@@ -357,7 +357,7 @@ class _TotalBalanceCardState extends State<TotalBalanceCard> {
                             ),
                           ),
                           Text(
-                              "${formatNumberWithComma(widget.summary?.totalDebit)} ETB",
+                              "${formatNumberWithComma(widget.summary?.totalDebit)} AED",
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,

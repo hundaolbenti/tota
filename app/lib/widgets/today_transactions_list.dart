@@ -131,29 +131,38 @@ class _TodayTransactionItem extends StatelessWidget {
         ? Theme.of(context).colorScheme.onSurfaceVariant
         : categoryTypeColor(category, context);
 
+    final currency = (() {
+      final bankId = transaction.bankId;
+      if (bankId == null) return 'AED';
+      for (final b in AppConstants.banks) {
+        if (b.id == bankId) return b.currency ?? 'AED';
+      }
+      return 'AED';
+    })();
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isHighlighted
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
-              : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
             color: isHighlighted
-                ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
-                : Theme.of(context)
-                    .colorScheme
-                    .onSurfaceVariant
-                    .withOpacity(0.1),
-            width: 1,
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isHighlighted
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                  : Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withOpacity(0.1),
+              width: 1,
+            ),
           ),
-        ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -189,18 +198,6 @@ class _TodayTransactionItem extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                        // if (transaction.receiver != null)
-                        //   Text(
-                        //     transaction.receiver!,
-                        //     style: TextStyle(
-                        //       fontSize: 13,
-                        //       color: Theme.of(context)
-                        //           .colorScheme
-                        //           .onSurfaceVariant,
-                        //     ),
-                        //     maxLines: 1,
-                        //     overflow: TextOverflow.ellipsis,
-                        //   ),
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
@@ -221,7 +218,7 @@ class _TodayTransactionItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${isCredit ? '+' : '-'}ETB ${formatCurrency(transaction.amount)}',
+                        '${isCredit ? '+' : '-'}$currency ${formatCurrency(transaction.amount)}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -230,6 +227,7 @@ class _TodayTransactionItem extends StatelessWidget {
                               : Theme.of(context).colorScheme.error,
                         ),
                       ),
+
                       if (dateTime != null) ...[
                         const SizedBox(height: 4),
                         Text(

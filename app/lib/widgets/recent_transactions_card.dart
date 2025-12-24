@@ -5,6 +5,7 @@ import 'package:totals/providers/transaction_provider.dart';
 import 'package:totals/utils/text_utils.dart';
 import 'package:totals/utils/category_icons.dart';
 import 'package:totals/utils/category_style.dart';
+import 'package:totals/data/consts.dart';
 
 class RecentTransactionsCard extends StatelessWidget {
   final List<Transaction> transactions;
@@ -77,8 +78,7 @@ class RecentTransactionsCard extends StatelessWidget {
                   itemCount: transactions.length,
                   separatorBuilder: (_, __) => Divider(
                     height: 16,
-                    color:
-                        Theme.of(context).dividerColor.withOpacity(0.7),
+                    color: Theme.of(context).dividerColor.withOpacity(0.7),
                   ),
                   itemBuilder: (context, index) {
                     final tx = transactions[index];
@@ -104,9 +104,7 @@ class RecentTransactionsCard extends StatelessWidget {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: (isCredit
-                                        ? Colors.green
-                                        : Colors.red)
+                                color: (isCredit ? Colors.green : Colors.red)
                                     .withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -115,8 +113,7 @@ class RecentTransactionsCard extends StatelessWidget {
                                     ? Icons.arrow_downward_rounded
                                     : Icons.arrow_upward_rounded,
                                 size: 18,
-                                color:
-                                    isCredit ? Colors.green : Colors.red,
+                                color: isCredit ? Colors.green : Colors.red,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -162,7 +159,18 @@ class RecentTransactionsCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              '${isCredit ? '+' : '-'}ETB ${formatNumberWithComma(tx.amount)}',
+                              (() {
+                                final currency = (() {
+                                  final bankId = tx.bankId;
+                                  if (bankId == null) return 'AED';
+                                  for (final b in AppConstants.banks) {
+                                    if (b.id == bankId)
+                                      return b.currency ?? 'AED';
+                                  }
+                                  return 'AED';
+                                })();
+                                return '${isCredit ? '+' : '-'}$currency ${formatNumberWithComma(tx.amount)}';
+                              })(),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:totals/data/consts.dart';
+import 'package:totals/models/bank.dart';
 import 'package:totals/models/transaction.dart';
 import 'package:totals/services/notification_intent_bus.dart';
 import 'package:totals/services/notification_settings_service.dart';
@@ -36,9 +37,8 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationResponse,
     );
 
-    final androidPlugin =
-        _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         _transactionChannelId,
@@ -135,14 +135,12 @@ class NotificationService {
       if (kIsWeb) return;
 
       if (defaultTargetPlatform == TargetPlatform.android) {
-        final androidPlugin =
-            _plugin.resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
         await androidPlugin?.requestNotificationsPermission();
       } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-        final iosPlugin =
-            _plugin.resolvePlatformSpecificImplementation<
-                IOSFlutterLocalNotificationsPlugin>();
+        final iosPlugin = _plugin.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
         await iosPlugin?.requestPermissions(
           alert: true,
           badge: true,
@@ -169,7 +167,8 @@ class NotificationService {
 
       final bank = _findBank(bankId);
       final title = _buildTitle(bank, transaction);
-      final body = _buildBody(transaction);
+      final currency = bank?.currency ?? 'AED';
+      final body = _buildBody(transaction, currency);
 
       final id = _notificationId(transaction);
       final payload = 'tx:${Uri.encodeComponent(transaction.reference)}';
@@ -213,7 +212,7 @@ class NotificationService {
       }
 
       final title = "Today's spending";
-      final body = "You've spent ${formatNumberWithComma(amount)} ETB today.";
+      final body = "You've spent ${formatNumberWithComma(amount)} AED today.";
 
       await _plugin.show(
         id,
@@ -263,8 +262,7 @@ class NotificationService {
       final percent = (clamped * 100).round();
       final title = bankLabel == null ? 'Syncing account' : '$bankLabel sync';
       final maskedAccount = _maskAccountNumber(accountNumber);
-      final body =
-          maskedAccount == null ? stage : '$stage - $maskedAccount';
+      final body = maskedAccount == null ? stage : '$stage - $maskedAccount';
 
       await _plugin.show(
         _accountSyncNotificationId(accountNumber, bankId),
@@ -307,8 +305,9 @@ class NotificationService {
     try {
       await ensureInitialized();
 
-      final title =
-          bankLabel == null ? 'Account sync complete' : '$bankLabel sync complete';
+      final title = bankLabel == null
+          ? 'Account sync complete'
+          : '$bankLabel sync complete';
       final body = message ?? 'Your transactions are up to date.';
 
       await _plugin.show(
@@ -359,7 +358,7 @@ class NotificationService {
     return '$bankLabel • $kind';
   }
 
-  static String _buildBody(Transaction transaction) {
+  static String _buildBody(Transaction transaction, String currency) {
     final sign = switch (transaction.type) {
       'CREDIT' => '+',
       'DEBIT' => '-',
@@ -371,7 +370,8 @@ class NotificationService {
       transaction.receiver,
     ]);
 
-    final amount = '${sign}ETB ${formatNumberWithComma(transaction.amount)}';
+    final amount =
+        '${sign}$currency ${formatNumberWithComma(transaction.amount)}';
     if (counterparty == null) return '$amount • Tap to categorize';
     return '$amount • $counterparty • Tap to categorize';
   }

@@ -89,7 +89,8 @@ class _AccountCardState extends State<AccountCard> {
 
     final displayBalance = isHidden
         ? "*****"
-        : "${formatNumberWithComma(widget.account.balance)} ETB";
+        : "${formatNumberWithComma(widget.account.balance)} ${bank.currency ?? "AED"}";
+
     final displayAccount =
         isHidden ? "**** **** **** ****" : widget.account.accountNumber;
 

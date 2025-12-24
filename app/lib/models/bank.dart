@@ -4,22 +4,25 @@ class Bank {
   final String shortName;
   final List<String> codes;
   final String image;
+  final String? currency;
   final int? maskPattern;
   final bool? uniformMasking;
   final bool? simBased;
   final List<String>? colors;
 
-  Bank({
+  const Bank({
     required this.id,
     required this.name,
     required this.shortName,
     required this.codes,
     required this.image,
+    this.currency,
     this.maskPattern,
     this.uniformMasking,
     this.simBased,
     this.colors,
   });
+
 
   factory Bank.fromJson(Map<String, dynamic> json) {
     return Bank(
@@ -28,6 +31,7 @@ class Bank {
       shortName: json['shortName'],
       codes: json['codes'] != null ? List<String>.from(json['codes']) : [],
       image: json['image'],
+      currency: json['currency'],
       maskPattern: json['maskPattern'],
       uniformMasking: json['uniformMasking'],
       simBased: json['simBased'],
@@ -42,6 +46,7 @@ class Bank {
       'shortName': shortName,
       'codes': codes,
       'image': image,
+      'currency': currency,
       'maskPattern': maskPattern,
       'uniformMasking': uniformMasking,
       'simBased': simBased,
@@ -49,3 +54,4 @@ class Bank {
     };
   }
 }
+

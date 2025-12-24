@@ -45,9 +45,6 @@ class DataExportImportService {
       final Map<String, dynamic> data = jsonDecode(jsonData);
       final db = await DatabaseHelper.instance.database;
 
-      // Validate version (for future compatibility)
-      final version = data['version'] ?? '1.0';
-
       // Import accounts (append, skip duplicates)
       if (data['accounts'] != null) {
         final accountsList = (data['accounts'] as List)
@@ -93,7 +90,8 @@ class DataExportImportService {
               'transactionLink': transaction.transactionLink,
               'accountNumber': transaction.accountNumber,
             },
-            conflictAlgorithm: ConflictAlgorithm.ignore, // Skip if reference exists
+            conflictAlgorithm:
+                ConflictAlgorithm.ignore, // Skip if reference exists
           );
         }
         await batch.commit(noResult: true);
@@ -103,7 +101,8 @@ class DataExportImportService {
       if (data['failedParses'] != null) {
         final batch = db.batch();
         for (var json in data['failedParses'] as List) {
-          final failedParse = FailedParse.fromJson(json as Map<String, dynamic>);
+          final failedParse =
+              FailedParse.fromJson(json as Map<String, dynamic>);
           batch.insert('failed_parses', {
             'address': failedParse.address,
             'body': failedParse.body,
@@ -126,4 +125,3 @@ class DataExportImportService {
     }
   }
 }
-

@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       path,
-      version: 13,
+      version: 14,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -114,6 +114,7 @@ class DatabaseHelper {
         shortName TEXT NOT NULL,
         codes TEXT NOT NULL,
         image TEXT NOT NULL,
+        currency TEXT,
         maskPattern INTEGER,
         uniformMasking INTEGER,
         simBased INTEGER,
@@ -415,6 +416,27 @@ class DatabaseHelper {
         print("debug: Error adding colors column (might already exist): $e");
       }
     }
+
+    if (oldVersion < 14) {
+      // Add currency column to banks table for version 14
+      try {
+        await db.execute('ALTER TABLE banks ADD COLUMN currency TEXT');
+        print("debug: Added currency column to banks table");
+      } catch (e) {
+        print("debug: Error adding currency column (might already exist): $e");
+      }
+
+      // Force re-seeding of banks and patterns by clearing the tables.
+      // This ensures removed banks/patterns are gone and new ones (like e&money) are added.
+      try {
+        await db.delete('banks');
+        await db.delete('sms_patterns');
+        print("debug: Cleared banks and sms_patterns for re-seeding in v14");
+      } catch (e) {
+        print("debug: Error clearing tables: $e");
+      }
+    }
+
   }
 
   Future<void> _seedBuiltInCategories(Database db) async {

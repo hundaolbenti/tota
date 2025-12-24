@@ -104,7 +104,6 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
 
   String _getBankLabel(Transaction transaction) {
     final bankId = transaction.bankId ?? widget.bankId;
-    if (bankId == null) return 'Unknown bank';
     try {
       final bank = _banks.firstWhere((b) => b.id == bankId);
       final shortName = bank.shortName.trim();
@@ -466,7 +465,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                               CrossAxisAlignment.center,
                                           children: [
                                             Text(
-                                              "${showTotalBalance ? formatNumberWithComma(accountSummary.balance) : '*' * ((accountSummary.balance).toString()).length} ETB",
+                                              "${showTotalBalance ? formatNumberWithComma(accountSummary.balance) : '*' * ((accountSummary.balance).toString()).length} ${_getBankInfo()?.currency ?? 'AED'}",
                                               style: const TextStyle(
                                                 fontSize: 14,
                                                 color: Color(0xFFF7F8FB),
@@ -511,7 +510,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                             ),
                                           ),
                                           Text(
-                                              "${formatNumberWithComma(accountSummary.totalCredit)} ETB",
+                                              "${formatNumberWithComma(accountSummary.totalCredit)} ${_getBankInfo()?.currency ?? 'AED'}",
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.white,
@@ -531,7 +530,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                             ),
                                           ),
                                           Text(
-                                              "${formatNumberWithComma(accountSummary.totalDebit)} ETB",
+                                              "${formatNumberWithComma(accountSummary.totalDebit)} ${_getBankInfo()?.currency ?? 'AED'}",
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.white,

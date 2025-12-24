@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:totals/providers/transaction_provider.dart';
-import 'package:totals/models/transaction.dart';
 
 class DebugTransactionsDialog extends StatelessWidget {
   const DebugTransactionsDialog({super.key});
@@ -23,7 +22,7 @@ class DebugTransactionsDialog extends StatelessWidget {
                 final t = transactions[index];
                 return ListTile(
                   title: Text(
-                    "Bank(${t.bankId})'} - ${t.reference ?? 'No Ref'}",
+                    "Bank(${t.bankId}) - ${t.reference}",
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Column(

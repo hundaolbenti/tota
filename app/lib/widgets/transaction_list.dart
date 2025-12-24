@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:totals/data/consts.dart';
-import 'package:totals/main.dart';
 
 class Transaction {
   final String reference;
@@ -49,7 +47,8 @@ class TransactionList extends StatelessWidget {
                           transaction.creditor,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],

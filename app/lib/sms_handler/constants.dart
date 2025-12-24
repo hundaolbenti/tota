@@ -245,7 +245,6 @@ extension Value on Sort {
       case Sort.ASC:
         return "ASC";
       case Sort.DESC:
-      default:
         return "DESC";
     }
   }

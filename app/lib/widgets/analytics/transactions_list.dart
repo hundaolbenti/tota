@@ -6,6 +6,7 @@ import 'package:totals/providers/transaction_provider.dart';
 import 'package:totals/services/bank_config_service.dart';
 import 'package:totals/utils/category_icons.dart';
 import 'package:totals/utils/category_style.dart';
+import 'package:totals/data/consts.dart';
 
 class TransactionsList extends StatefulWidget {
   final List<Transaction> transactions;
@@ -53,8 +54,7 @@ class _TransactionsListState extends State<TransactionsList> {
       if (!mounted) return;
       setState(() {
         _bankLabelsById = {
-          for (final bank in banks)
-            bank.id: _bankLabelFor(bank),
+          for (final bank in banks) bank.id: _bankLabelFor(bank),
         };
       });
     } catch (e) {
@@ -458,7 +458,8 @@ class TransactionListItem extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            color:
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: Theme.of(context)
@@ -488,8 +489,7 @@ class TransactionListItem extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (hasReceiver)
-                          const SizedBox(height: 4),
+                        if (hasReceiver) const SizedBox(height: 4),
                         if (hasReceiver)
                           Text(
                             'to $receiver',
@@ -523,7 +523,17 @@ class TransactionListItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${isCredit ? '+' : '-'}ETB ${formatCurrency(transaction.amount)}',
+                        (() {
+                          final currency = (() {
+                            final bankId = transaction.bankId;
+                            if (bankId == null) return 'AED';
+                            for (final b in AppConstants.banks) {
+                              if (b.id == bankId) return b.currency ?? 'AED';
+                            }
+                            return 'AED';
+                          })();
+                          return '${isCredit ? '+' : '-'}$currency ${formatCurrency(transaction.amount)}';
+                        })(),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -538,7 +548,8 @@ class TransactionListItem extends StatelessWidget {
                           dateStr,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                         if (timeStr.isNotEmpty)

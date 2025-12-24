@@ -580,7 +580,7 @@ The server includes CORS headers allowing cross-origin requests from any origin.
 - All endpoints return JSON responses
 - Date filters use ISO 8601 format: `YYYY-MM-DDTHH:mm:ssZ`
 - Pagination uses `limit` and `offset` parameters
-- Transaction amounts are in ETB (Ethiopian Birr)
+- Transaction amounts are in AED (United Arab Emirates Dirham)
 - Account numbers are matched using bank-specific logic:
   - **CBE**: Last 4 digits
   - **Dashen**: Last 3 digits

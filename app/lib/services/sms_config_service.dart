@@ -96,417 +96,59 @@ class SmsConfigService {
       refRequired: false,
       hasAccount: true,
     ),
-    SmsPattern(
-      bankId: 2,
-      senderId: "Awash",
-      regex:
-          r"account\s+(?<account>[\d\*x]+)\s+has\s+been\s+debited\s+with\s+ETB\s+(?<amount>[\d,.]+).*?Your\s+current\s+balance\s+is\s+ETB\s+(?<balance>[\d,.]+).*?https?:\/\/[^\s]+\/(?<reference>[A-Z0-9-]+)",
-      type: "DEBIT",
-      description: "Awash Account Debit",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 2,
-      senderId: "Awash",
-      regex:
-          r"Account\s+(?<account>[\d\*x]+)\s+has\s+been\s+Credited\s+with\s+ETB\s+(?<amount>[\d,.]+).*?to\s+Awash\s+with\s+reference\s+(?<reference>[A-Z0-9]+).*?balance\s+now\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Awash Account Credit (TeleBirr C2B)",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 2,
-      senderId: "Awash",
-      regex:
-          r"You\s+have\s+transferred\s+to\s+other\s+bank\s+ETB\s+(?<amount>[\d,.]+)\s+To\s+(?<receiver>[^\(]+).*?Your\s+available\s+Balance\s+is\s+ETB\s+(?<balance>[\d,.]+).*?Receipt\s+Link:\s*https?:\/\/[^\s]+\/(?<reference>[A-Z0-9-]+)",
-      type: "DEBIT",
-      description: "Awash Other Bank Transfer",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 2,
-      senderId: "Awash",
-      regex:
-          r"Telebirr\s+Transfer\s+of\s+(?<amount>[\d,.]+)\s+ETB\s+to\s+(?<receiver>[^-]+)\s+-\s+(?<receiverAccount>[\d]+).*?Your\s+Balance\s+is\s+ETB\s+(?<balance>[\d,.]+).*?Receipt\s+Link:\s*https?:\/\/[^\s]+\/(?<reference>[A-Z0-9-]+)",
-      type: "DEBIT",
-      description: "Awash Telebirr Transfer",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 2,
-      senderId: "Awash",
-      regex:
-          r"Account\s+(?<account>[\d\*x]+)\s+has\s+been\s+Credited\s+with\s+ETB\s+(?<amount>[\d,.]+).*?Your\s+balance\s+now\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Awash Account Credit",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 2,
-      senderId: "Awash",
-      regex:
-          r"Merchant\s+payment\s+of\s+(?<amount>[\d,.]+)\s+ETB\s+to\s+(?<receiver>[^.]+)\.\s+Ref\s+(?<reference>[\dA-Z]+).*?Receipt\s+Link:\s*https?:\/\/[^\s]+",
-      type: "DEBIT",
-      description: "Awash Merchant Payment",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 2,
-      senderId: "Awash",
-      regex:
-          r"Account\s+(?<account>[0-9xX*]+).*?(?:Debited|Credited)\s+with\s+ETB\s+-?(?<amount>[\d,.]+).*?balance\s+now\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Awash debit with no ref",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 2,
-      senderId: "Awash",
-      regex:
-          r"You\s+have\s+transferred\s+to\s+.*?\s+Amount\s+(?<amount>[\d,.]+)\s*ETB\s+To\s+(?<receiverAccount>\d+)\s+\((?<receiver>[^)]+)\).*?Balance\s+is\s+ETB\s+(?<balance>[\d,.]+).*?Receipt\s+Link:\s*https?:\/\/[^\s]+\/(?<reference>[A-Z0-9-]+)",
-      type: "DEBIT",
-      description: "Awash Other Bank Transfer (Flexible)",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 3,
-      senderId: "BOA",
-      regex:
-          r"account\s+(?<account>[\d\*]+)\s+was\s+debited\s+with\s+ETB\s+(?<amount>[\d,.]+)\s*\.\s*Available\s+Balance:\s*ETB\s+(?<balance>[\d,.]+)\s*\.\s*Receipt:\s*https?:\/\/[^\s]+\?trx=(?<reference>FT[A-Z0-9]+)",
-      type: "DEBIT",
-      description: "BOA Debit",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 3,
-      senderId: "BOA",
-      regex:
-          r"account\s+(?<account>[\d\*]+).*?credited\s+with\s+ETB\s+(?<amount>[\d,.]+)\s+by\s+(?<source>[^.]+)\.\s+Available\s+Balance:\s+ETB\s+(?<balance>[\d,.]+).*?Receipt:\s*https?:\/\/[^\s]+\?trx=(?<reference>FT[A-Z0-9]+)",
-      type: "CREDIT",
-      description: "BOA Credit",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 3,
-      senderId: "BOA",
-      regex:
-          r"account\s+(?<account>[\d\*]+).*?credited\s+with\s+ETB\s+(?<amount>[\d,\.]+).*?transfer\s+made\s+by\s+(?<source>.+?)\s+through.*?available\s+balance.*?ETB\s+(?<balance>[\d,\.]+)",
-      type: "CREDIT",
-      description: "BOA Transfer Credit (old)",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 3,
-      senderId: "BOA",
-      regex:
-          r"account\s+(?<account>[\d\*]+).*?debited\s+with\s+ETB\s+(?<amount>[\d,\.]+).*?account transfer you made\s+through\s+(?<source>.+?)\..*?available\s+balance.*?ETB\s+(?<balance>[\d,\.]+)",
-      type: "DEBIT",
-      description: "BOA Transfer Debit (old)",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 3,
-      senderId: "BOA",
-      regex:
-          r"account\s+(?<account>[\d\*]+).*?credited\s+with\s+ETB\s+(?<amount>[\d,\.]+).*?transfer\s+made\s+by\s*(?<source>.*?)\s+through.*?available\s+balance.*?ETB\s+(?<balance>[\d,\.]+)",
-      type: "CREDIT",
-      description: "BOA Transfer Credit (no ref)",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 4,
-      senderId: "Dashen",
-      regex:
-          r"received\s+ETB\s+(?<amount>[\d,.]+).*?Ref\s+No:?\s*(?<reference>\d+).*?on\s+(?<date>\d{2}\/\d{2}\/\d{4})\s+\d{2}:\d{2}:\d{2}.*?account\s+'(?<account>[\d\*]+)'.*?balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Dashen Telebirr Credit",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 4,
-      senderId: "Dashen",
-      regex:
-          r"ETB\s+(?<amount>[\d,.]+)\s+has\s+been\s+debited\s+from\s+your\s+account\s+(?<account>[\d\*]+).*?on\s+(?<date>\d{4}-\d{2}-\d{2})\s+at\s+\d{2}:\d{2}:\d{2}.*?current\s+balance\s+is\s+ETB\s+(?<balance>[\d,.]+).*?receipt\/+(?<reference>[A-Z0-9]+)",
-      type: "DEBIT",
-      description: "Dashen Telebirr Transfer Debit (with Receipt Ref)",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 4,
-      senderId: "Dashen",
-      regex:
-          r"account\s+'(?<account>[\d\*]+)'.*?credited\s+with\s+ETB\s+(?<amount>[\d,.]+).*?on\s+(?<date>\d{2}\/\d{2}\/\d{4}).*?current\s+balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Dashen Account Credit",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 4,
-      senderId: "Dashen",
-      regex:
-          r"transferred\s+ETB\s+(?<amount>[\d,.]+)\s+to\s+your\s+account\s+'(?<account>[\d\*]+)'.*?on\s+(?<date>\d{2}\/\d{2}\/\d{4}).*?current\s+balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Dashen Account Transfer Credit",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 4,
-      senderId: "Dashen",
-      regex:
-          r"account\s+'(?<account>[\d\*]+)'\s+is\s+debited\s+with\s+ETB\s+(?<amount>[\d,.]+)\s+on\s+(?<date>\d{2}\/\d{2}\/\d{4}).*?current\s+balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Dashen Account Debit",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 4,
-      senderId: "Dashen",
-      regex:
-          r"account\s+(?<account>[\d\*]+)\s+has\s+been\s+debited\s+with\s+ETB\s+(?<amount>[\d,.]+).*?on\s+(?<date>\d{4}-\d{2}-\d{2}).*?current\s+balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Dashen Account Debit 2",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 5,
-      senderId: "Zemen",
-      regex:
-          r"account\s+(?<account>[\dx]+)\s+has\s+been\s+credited\s+with\s+ETB\s+(?<amount>[\d,.]+).*?with\s+reference\s+(?<reference>[A-Z0-9]+)\s+on\s+(?<date>\d{1,2}-[A-Za-z]{3}-\d{4}).*?Current\s+Balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Zemen Account Credit",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 5,
-      senderId: "Zemen",
-      regex:
-          r"Birr\s+(?<amount>[\d,.]+)\s+ATM\s+cash\s+withdrawal.*?from\s+A\/c\s+No\.\s+(?<account>[\dx]+)\s+on\s+(?<date>\d{1,2}-[A-Za-z]{3}-\d{4}).*?Available\s+Bal\.\s+is\s+Birr\s+(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Zemen ATM Withdrawal",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 5,
-      senderId: "Zemen",
-      regex:
-          r"Birr\s+(?<amount>[\d,]+(?:\.\d+)?)\s+Cash\s+deposit.*?to\s+A\/c\s+No\.\s+(?<account>[\dx]+)\s+on\s+(?<date>\d{1,2}-[A-Za-z]{3}-\d{4}).*?Available\s+Bal\.\s+is\s+Birr\s+(?<balance>[\d,]+(?:\.\d+)?)",
-      type: "CREDIT",
-      description: "Zemen Cash Deposit",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 6,
-      senderId: "telebirr",
-      regex:
-          r"transferred\s+ETB\s?(?<amount>[\d,.]+)\s+to\s+(?<receiver>[^(]+?)\s*\(.*?transaction\s+number\s+is\s+(?<reference>[A-Z0-9]+).*?balance\s+is\s+ETB\s?(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Telebirr P2P Transfer",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 5,
-      senderId: "Zemen",
-      regex:
-          r"Birr\s+(?<amount>[\d,]+(?:\.\d+)?)\s+Inward\s+RTGS\s+transfer.*?to\s+A\/c\s+No\.\s+(?<account>[\dx]+)\s+on\s+(?<date>\d{1,2}-[A-Za-z]{3}-\d{4}).*?Available\s+Bal\.\s+is\s+Birr\s+(?<balance>[\d,]+\.\d{2})",
-      type: "CREDIT",
-      description: "Zemen Inward RTGS Transfer",
-      refRequired: false,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 6,
-      senderId: "telebirr",
-      regex:
-          r"transferred\s+ETB\s+(?<amount>[\d,]+(?:\.\d+)?)\s+successfully\s+from\s+yourtelebirr\s+account\s+(?<account>\d+).*?on\s+(?<date>\d{1,2}/\d{1,2}/\d{4}).*?telebirr\s+transaction\s+number\s+is\s+(?<reference>[A-Z0-9]+).*?current\s+balance\s+is\s+ETB\s+(?<balance>[\d,]+\.\d{2})",
-      type: "DEBIT",
-      description: "Telebirr Transfer to banks",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 6,
-      senderId: "telebirr",
-      regex:
-          r"transferred\s+ETB\s?(?<amount>[\d,.]+).*?from\s+your\s+telebirr\s+account\s+(?<account>\d+)\s+to\s+(?<receiver>.+?)\s+account\s+number\s+(?<bankAccount>\d+).*?telebirr\s+transaction\s+number\s*is\s*(?<reference>[A-Z0-9]+).*?balance\s+is\s+ETB\s?(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Telebirr to Bank Transfer",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 6,
-      senderId: "telebirr",
-      regex:
-          r"paid\s+ETB\s?(?<amount>[\d,.]+)\s+for\s+goods\s+purchased\s+from\s+(?<receiver>.+?)\s+on.*?transaction\s+number\s+is\s+(?<reference>[A-Z0-9]+).*?balance\s+is\s+ETB\s?(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Telebirr Merchant Purchase",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 6,
-      senderId: "telebirr",
-      regex:
-          r"paid\s+ETB\s?(?<amount>[\d,.]+)\s+to\s+(?<receiver>.+?)\s*(?:;|,\s*Bill).*?transaction\s+number\s+is\s+(?<reference>[A-Z0-9]+).*?balance\s+is\s+ETB\s?(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Telebirr Bill Payment",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 6,
-      senderId: "telebirr",
-      regex:
-          r"received\s+ETB\s?(?<amount>[\d,.]+).*?\s+from\s+(?<sender>.+?)\s+on\s+(?<date>\d{1,2}[\/]\d{1,2}[\/]\d{4}\s+\d{1,2}:\d{2}:\d{2}).*?transaction\s+number\s+is\s*(?<reference>[A-Z0-9]+).*?balance\s+is\s+ETB\s?(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Telebirr Money Received (P2P)",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 6,
-      senderId: "telebirr",
-      regex:
-          r"received\s+ETB\s?(?<amount>[\d,.]+)\s+by\s+transaction\s+number\s*(?<reference>[A-Z0-9]+).*?from\s+.*?\s+to\s+your\s+telebirr\s+account.*?balance\s+is\s+ETB\s?(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Telebirr Received from Bank",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 6,
-      senderId: "telebirr",
-      regex:
-          r"paid\s+ETB\s+(?<amount>[\d,]+(?:\.\d{2})?)\s+for\s+(?<receiver>.+?)\s+purchase\s+made.*?transaction\s+number\s+is\s+(?<reference>[A-Z0-9]+).*?current\s+balance\s+is\s+ETB\s+(?<balance>[\d,]+(?:\.\d{2})?)",
-      type: "DEBIT",
-      description: "Telebirr debit for package",
-      refRequired: true,
-      hasAccount: false,
-    ),
-    SmsPattern(
-      bankId: 7,
-      senderId: "NIB",
-      regex:
-          r"Account\s+(?<account>[\d\*]+)\s+has\s+been\s+Debited\s+with\s+ETB\s+-?(?<amount>[\d,.]+)\s+On\s+(?<date>\d{1,2}\s+[A-Z]{3}\s+\d{4})\s+Ref:\s+(?<reference>[A-Z0-9]+).*?Current\s+Balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Nib Account Debit",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 7,
-      senderId: "NIB",
-      regex:
-          r"Account\s+(?<account>[\d\*]+)\s+has\s+been\s+Debited\s+with\s+ETB\s+-?(?<amount>[\d,.]+).*?On\s+(?<date>\d{1,2}\s+[A-Z]{3}\s+\d{4})\s+Ref:\s+(?<reference>[A-Z0-9]+).*?Current\s+Balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Nib Account Debit with Charges",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 7,
-      senderId: "NIB",
-      regex:
-          r"Account\s+(?<account>[\d\*]+)\s+has\s+been\s+Debited\s+with\s+ETB\s+-?(?<amount>[\d,.]+)\s+On\s+(?<date>\d{1,2}\s+[A-Z]{3}\s+\d{4}).*?Ref:\s+(?<reference>[A-Z0-9]+).*?Current\s+Balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "DEBIT",
-      description: "Nib Account Debit (Telebirr/Service Charge)",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 7,
-      senderId: "NIB",
-      regex:
-          r"Account\s+(?<account>[\d\*]+)\s+has\s+been\s+Credited\s+with\s+ETB\s+(?<amount>[\d,.]+)\s+On\s+(?<date>\d{1,2}\s+[A-Z]{3}\s+\d{4}).*?Ref:\s+(?<reference>[A-Z0-9]+).*?Current\s+Balance\s+is\s+ETB\s+(?<balance>[\d,.]+)",
-      type: "CREDIT",
-      description: "Nib Account Credit",
-      refRequired: true,
-      hasAccount: true,
-    ),
+    // e& money patterns
     SmsPattern(
       bankId: 8,
-      senderId: "MPESA",
+      senderId: "eandmoney",
       regex:
-          r"you\s+have\s+deposited\s+(?<amount>[\d,.]+)\s+Birr\s+with\s+agent\s+(?<agent>.*?)\s+on\s+(?<date>\d{1,2}/\d{1,2}/\d{2})\s+at\s+(?<time>\d{1,2}:\d{2}\s+[AP]M)\.\s+Transaction\s+number\s+(?<reference>[A-Z0-9]+)\.\s+Your\s+current\s+M-PESA\s+balance\s+is\s+(?<balance>[\d,.]+)\s+Birr",
+          r"A deposit of AED (?<amount>[\d,.]+)  has been made into your e& money\. Your new balance is (?<balance>[\d,.]+) AED\. Your transaction ID is  (?<reference>\d+)",
       type: "CREDIT",
-      description: "M-PESA Deposit from Agent",
+      description: "e& money deposit",
       refRequired: true,
       hasAccount: false,
     ),
     SmsPattern(
       bankId: 8,
-      senderId: "MPESA",
+      senderId: "eandmoney",
       regex:
-          r"የ(?<amount>[\d,.]+)\s+ብር\s+የሳፋሪኮም\s+ጥቅል\s+ለ(?<account>\d+)\s+በ(?<date>\d{1,2}/\d{1,2}/\d{2})\s+በ(?<time>\d{1,2}:\d{2}\s+[AP]M)\s+ላይ\s+ገዝተዋል።\s+የገንዘብ\s+ዝውውር\s+መለያ\s+ቁጥር\s+(?<reference>[A-Z0-9]+)\s+ነው።.*?አሁን\s+ያለዎት\s+የM-PESA\s+ቀሪ\s+ሒሳብ\s+(?<balance>[\d,.]+)\s+ብር",
-      type: "DEBIT",
-      description: "M-PESA Bundle Purchase (Amharic)",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 8,
-      senderId: "MPESA",
-      regex:
-          r"you\s+have\s+paid\s+(?<amount>[\d,.]+)\s+Birr\s+to\s+(?<receiver>\d+\s+-\s+.*?)\s+on\s+(?<date>\d{1,2}/\d{1,2}/\d{2}).*?at\s+(?<time>\d{1,2}:\d{2}\s+[AP]M)\.\s+Transaction\s+number\s+(?<reference>[A-Z0-9]+).*?Your\s+M-PESA\s+balance\s+is\s+(?<balance>[\d,.]+)\s+Birr",
-      type: "DEBIT",
-      description: "M-PESA Payment to Merchant",
-      refRequired: true,
-      hasAccount: true,
-    ),
-    SmsPattern(
-      bankId: 8,
-      senderId: "MPESA",
-      regex:
-          r"(?<amount>[\d,.]+)\s+ብር\s+ከ\s+(?<sender>.*?)\s+በ\s+(?<date>\d{1,2}/\d{1,2}/\d{2})\s+በ\s+(?<time>\d{1,2}:\d{2}\s+[AP]M)\s+ላይ\s+ተቀብለዋል።\s+የገንዘብ\s+ዝውውር\s+መለያ\s+ቁጥር\s+(?<reference>[A-Z0-9]+)\s+ነው።.*?የM-PESA\s+ቀሪ\s+ሒሳብ\s+(?<balance>[\d,.]+)\s+ብር",
+          r"Good news! AED (?<amount>[\d,.]+) from (?<sender>.*?) landed in your account\.\s+Check your new balance: (?<balance>[\d,.]+)\s+Transaction ID: (?<reference>\d+)",
       type: "CREDIT",
-      description: "M-PESA Received from Bank (Amharic)",
+      description: "e& money received",
       refRequired: true,
       hasAccount: false,
     ),
     SmsPattern(
       bankId: 8,
-      senderId: "MPESA",
+      senderId: "eandmoney",
       regex:
-          r"የ(?<amount>[\d,.]+)\s+ብር\s+የአየር\s+ሰዓት\s+ለራስዎ\s+ስልክ\s+በ(?<date>\d{1,2}/\d{1,2}/\d{2})\s+(?<time>\d{1,2}:\d{2}\s+[AP]M)\s+ላይ\s+ገዝተዋል።\s+የገንዘብ\s+ዝውውር\s+መለያ\s+ቁጥር\s+(?<reference>[A-Z0-9]+)\s+ነው።.*?አሁን\s+ያልዎት\s+የM-PESA\s+ቀሪ\s+ሒሳብ\s+(?<balance>[\d,.]+)\s+ብር",
+          r"purchase of AED (?<amount>[\d,.]+) was successfully completed at (?<receiver>.*?) using your e& money card ending with (?<account>\d+).*?Available balance: AED (?<balance>[\d,.]+).*?Transaction ID: (?<reference>\d+)",
       type: "DEBIT",
-      description: "M-PESA Airtime for Self (Amharic)",
+      description: "e& money purchase",
+      refRequired: true,
+      hasAccount: true,
+    ),
+    SmsPattern(
+      bankId: 8,
+      senderId: "eandmoney",
+      regex:
+          r"You sent AED (?<amount>[\d,.]+) to (?<receiver>.*?)\.\s+New balance: (?<balance>[\d,.]+)\s+Transaction ID: (?<reference>\d+)",
+      type: "DEBIT",
+      description: "e& money sent",
       refRequired: true,
       hasAccount: false,
     ),
     SmsPattern(
       bankId: 8,
-      senderId: "MPESA",
+      senderId: "eandmoney",
       regex:
-          r"ተመላሽ\s+ስለሆነ\s+(?<amount>[\d,.]+)\s+ብር\s+ወደ\s+M-PESA\s+ሒሳብዎ\s+ገቢ\s+ተደርጓል።\s+የገንዘብ\s+ዝውውር\s+መለያ\s+ቁጥር\s+(?<reference>[A-Z0-9]+)\s+ነው።.*?የM-PESA\s+ቀሪ\s+ሂሳብ\s+(?<balance>[\d,.]+)\s+ብር",
+          r"AED (?<amount>[\d,.]+) added to your e\& money using your card\..*?Your updated balance is AED (?<balance>[\d,.]+) \s+Transaction ID: (?<reference>\d+)",
       type: "CREDIT",
-      description: "M-PESA Reversal (Amharic)",
+      description: "e& money card load",
       refRequired: true,
       hasAccount: false,
     ),
   ];
+
   void debugSms(String smsText) {
     // Show invisible characters
     // print("Raw SMS (escaped): ${jsonEncode(smsText)}");
