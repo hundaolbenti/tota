@@ -16,7 +16,7 @@ Since your Flutter project is located in a subdirectory (`app/`), you need to co
 
 ## 3. Workflow Configuration
 1. Go to the **Workflows** tab and edit the workflow.
-2. **Flutter Version**: Ensure you select a stable Flutter version (e.g., 3.19.x or latest stable) that matches your `pubspec.yaml` environment.
+2. **Flutter Version**: Appcircle's "Stable" channel often points to the very latest usage (e.g. 3.24+ or 3.27+). We have upgraded the Gradle configuration to support these newer versions. If you prefer `3.19.x`, you must explicitly select it in Appcircle configuration. Current project config supports 3.22+ primarily.
 3. **Important: Working Directory**:
    - In the **Flutter Build** step (and `Flutter Install`, `Flutter Analyze` etc.), look for a setting called **Working Directory** or **Project Path**.
    - Set this to: `./app` or just `app`.
