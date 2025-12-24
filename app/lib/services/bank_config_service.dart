@@ -30,57 +30,7 @@ class BankConfigService {
   ];
 
   Future<List<Bank>> getBanks() async {
-    final db = await DatabaseHelper.instance.database;
-
-    // First, try to load from database
-    final List<Map<String, dynamic>> maps = await db.query('banks');
-    if (maps.isNotEmpty) {
-      try {
-        final banks = maps.map((map) {
-          return Bank.fromJson({
-            'id': map['id'],
-            'name': map['name'],
-            'shortName': map['shortName'],
-            'codes': jsonDecode(map['codes'] as String),
-            'image': map['image'],
-            'currency': map['currency'], // Added currency
-            'maskPattern': map['maskPattern'],
-            'uniformMasking': map['uniformMasking'] == null
-                ? null
-                : (map['uniformMasking'] == 1),
-            'simBased': map['simBased'] == null ? null : (map['simBased'] == 1),
-            'colors': map['colors'] != null
-                ? List<String>.from(jsonDecode(map['colors'] as String))
-                : null,
-          });
-        }).toList();
-        print("debug: Loaded ${banks.length} banks from database");
-        return banks;
-      } catch (e) {
-        print("debug: Error parsing stored banks: $e");
-        // Fall through to fetch from remote
-      }
-    }
-
-
-    // If not in database, try to fetch from remote (only if internet available)
-    final hasInternet = await _hasInternetConnection();
-    if (hasInternet) {
-      try {
-        final banks = await _fetchRemoteBanks();
-        if (banks.isNotEmpty) {
-          await saveBanks(banks);
-          return banks;
-        }
-      } catch (e) {
-        print("debug: Error fetching remote banks: $e");
-      }
-    } else {
-      print("debug: No internet connection, cannot fetch remote banks");
-    }
-
-    // Fallback to default list if no banks found
-    print("debug: No banks available, using defaults");
+    // Force use of default banks and sync to DB
     await saveBanks(_defaultBanks);
     return _defaultBanks;
   }
@@ -217,35 +167,9 @@ class BankConfigService {
   }
 
   // Initialize banks on app launch
-  // Returns true if internet is needed but not available
-  // Only fetches if banks don't exist (no background sync)
+  // Force reset to default banks provided in code
   Future<bool> initializeBanks() async {
-    final db = await DatabaseHelper.instance.database;
-    final List<Map<String, dynamic>> maps = await db.query('banks');
-
-    // If banks exist, return (no sync - sync only happens on explicit refresh)
-    if (maps.isNotEmpty) {
-      return false; // No internet needed, we have cached banks
-    }
-
-    // No banks stored, need to fetch
-    final hasInternet = await _hasInternetConnection();
-    if (!hasInternet) {
-      return true; // Internet needed but not available
-    }
-
-    // Fetch and save banks
-    try {
-      final banks = await _fetchRemoteBanks();
-      if (banks.isNotEmpty) {
-        await saveBanks(banks);
-        return false; // Success
-      } else {
-        return false;
-      }
-    } catch (e) {
-      print("debug: Error initializing banks: $e");
-      return false;
-    }
+    await saveBanks(_defaultBanks);
+    return false;
   }
 }

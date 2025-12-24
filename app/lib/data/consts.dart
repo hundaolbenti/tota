@@ -1,6 +1,5 @@
 import 'package:totals/models/bank.dart';
 
-
 class AppConstants {
   static const List<Bank> banks = [
     Bank(
