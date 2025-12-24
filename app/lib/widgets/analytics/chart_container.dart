@@ -55,7 +55,9 @@ class _ChartContainerState extends State<ChartContainer> {
   double _getChartHeight() {
     switch (widget.chartType) {
       case 'Heatmap':
-        return 350;
+        // Return null (adaptive) or a larger fixed height to accommodate 6 weeks
+        // 50 (cell height) * 6 (weeks) + spacing + headers ~ 400
+        return 420;
       default:
         return 280;
     }

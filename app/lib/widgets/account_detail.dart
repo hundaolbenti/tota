@@ -189,7 +189,9 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
           if (bank.uniformMasking == true && bank.maskPattern != null) {
             // Match last N digits based on mask pattern
             if (t.accountNumber == null || t.accountNumber!.isEmpty) {
-              return false;
+              // Valid transaction for this bank but has no account info (e.g. wallet deposit)
+              // We explicitly allow this to ensure it shows up in the account history
+              return true;
             }
             if (widget.accountNumber.length < bank.maskPattern! ||
                 t.accountNumber!.length < bank.maskPattern!) {
